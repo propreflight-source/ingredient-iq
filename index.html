@@ -172,15 +172,18 @@ async function loadRules() {
   return RULES;
 }
 
-function scoreIngredients(ingredientsText) {
+function scoreIngredients(ingredientsText, profile) {
   const text = (ingredientsText || "").toLowerCase();
+  const weights = profile ? getProfileWeights(profile) : {};
   const hits = [];
   let score = 100;
   for (const rule of RULES.ingredients) {
     const matched = rule.match.some((m) => text.includes(m.toLowerCase()));
     if (matched) {
-      score -= rule.points;
-      hits.push(rule);
+      const w = weights[rule.id] || 1;
+      const appliedPoints = Math.round(rule.points * w);
+      score -= appliedPoints;
+      hits.push(Object.assign({}, rule, { appliedPoints: appliedPoints, weightApplied: w }));
     }
   }
   score = Math.max(5, Math.min(100, score));
@@ -202,7 +205,7 @@ function renderResult(product, ingredientsText) {
     card.innerHTML = '<p class="muted">Product not found in Open Beauty Facts. Try a different barcode, or search by name.</p>';
     return;
   }
-  const { score, hits } = scoreIngredients(ingredientsText);
+  const { score, hits } = scoreIngredients(ingredientsText, loadProfile());
   const c = scoreColor(score);
   const name = (product && (product.product_name || product.product_name_en)) || "Unknown product";
   const brand = (product && product.brands) || "";
@@ -225,7 +228,10 @@ function renderResult(product, ingredientsText) {
   } else {
     html += '<div style="margin-top:1rem;"><b>What brought the score down:</b>';
     hits.forEach((h) => {
-      html += '<div class="flag"><div class="head"><span class="sev-' + h.severity + '">' + esc(h.label) + '</span><span class="pts sev-' + h.severity + '">-' + h.points + ' pts</span></div>' +
+      const weighted = h.weightApplied !== 1;
+      const ptsLabel = weighted ? ('-' + h.appliedPoints + ' pts (usually -' + h.points + ')') : ('-' + h.points + ' pts');
+      html += '<div class="flag"><div class="head"><span class="sev-' + h.severity + '">' + esc(h.label) + '</span><span class="pts sev-' + h.severity + '">' + ptsLabel + '</span></div>' +
+        (weighted ? '<div class="muted" style="font-size:0.78rem;margin-top:0.1rem;">weighted for your hair profile</div>' : '') +
         '<div class="why">' + esc(h.why) + '</div>' +
         '<div class="kid">🧒 In simple terms: ' + esc(h.kid_explainer) + '</div></div>';
     });
@@ -273,6 +279,13 @@ async function searchByName(q) {
 function renderMethodology() {
   const root = document.getElementById("methodology-body");
   let html = '<p class="muted">' + esc(RULES.methodology) + '</p>';
+  html += '<p class="muted">On top of the base rules above, your hair type and any hair ' +
+    'conditions you\'ve selected under "Your hair" can weight specific rules 1.5x (more ' +
+    'relevant for you) or 0.5x (less of a concern, and sometimes actively desired, like ' +
+    'sulfates for an oily scalp) based on real, commonly-documented haircare associations. ' +
+    'This only reweights rules that already fired -- it never adds or removes a flag. It\'s ' +
+    'still a simplified heuristic, not personalized medical or dermatological advice, and ' +
+    'any weighting applied is always shown next to the affected ingredient.</p>';
   RULES.ingredients.forEach((h) => {
     html += '<div class="flag"><div class="head"><span class="sev-' + h.severity + '">' + esc(h.label) + '</span><span class="pts sev-' + h.severity + '">-' + h.points + ' pts</span></div>' +
       '<div class="why">' + esc(h.why) + '</div></div>';
@@ -416,6 +429,61 @@ const HAIR_COLORS = [
   { id: "blonde", hex: "#e8c77e" }, { id: "red", hex: "#a33d1f" },
   { id: "gray", hex: "#b8b8b8" }, { id: "dyed", hex: "#8a4fd6" }
 ];
+
+// Real, commonly-documented haircare associations -- amplify = this concern matters MORE
+// for you, reduce = it matters LESS (or is actively desired, e.g. sulfates for oily scalp).
+// Deliberately conservative: only ingredient/condition pairs with well-established,
+// widely-cited backing, not speculative pairings. Multipliers, not overrides -- the base
+// score is still real and unchanged, this only reweights specific rules.
+const CONDITION_RULE_WEIGHTS = {
+  "color-treated":      { amplify: ["sls", "sles", "alcohol"], reduce: ["silicones", "mineral-oil"] },
+  "chemically-treated": { amplify: ["sls", "sles", "alcohol"], reduce: ["silicones", "mineral-oil"] },
+  "heat-styled":        { amplify: ["alcohol"], reduce: [] },
+  "dry-brittle":        { amplify: ["sls", "sles", "alcohol"], reduce: ["silicones", "mineral-oil"] },
+  "oily-scalp":         { amplify: ["silicones", "mineral-oil"], reduce: ["sls", "sles"] },
+  "fine-thinning":       { amplify: ["silicones", "mineral-oil"], reduce: [] },
+  // Dandruff causes vary too widely (fungal, dry skin, product buildup, etc.) for this
+  // rule set to make an honest ingredient-based call -- deliberately a no-op. Surface a
+  // note in the UI (see step 3) rather than silently pretending there's a real signal.
+  "dandruff":            { amplify: [], reduce: [] }
+};
+
+// Curlier/coilier hair is widely advised to be drier (natural scalp oil travels the shaft
+// less easily as curl pattern tightens) and to tolerate, or benefit from, richer/heavier
+// products -- silicones/oils are less of a downside there. Straight, fine hair is the most
+// buildup-prone in the other direction. Only the two ends of the spectrum get an entry;
+// the middle types (1B/1C/2A/2B/2C) are deliberately left at no-op rather than guessing.
+const HAIR_TYPE_WEIGHTS = {
+  "1a": { amplify: ["silicones", "mineral-oil"], reduce: [] },
+  "3a": { amplify: [], reduce: ["silicones", "mineral-oil"] },
+  "3b": { amplify: [], reduce: ["silicones", "mineral-oil"] },
+  "3c": { amplify: [], reduce: ["silicones", "mineral-oil"] },
+  "4a": { amplify: [], reduce: ["silicones", "mineral-oil"] },
+  "4b": { amplify: [], reduce: ["silicones", "mineral-oil"] },
+  "4c": { amplify: [], reduce: ["silicones", "mineral-oil"] }
+};
+
+// Returns { ruleId: multiplier } for every rule id touched by the profile's hair type or
+// selected conditions. 1.5x = amplified, 0.5x = reduced. If something is BOTH amplified
+// (by one condition/type) and reduced (by another) at the same time, they cancel to 1x --
+// transparent, not arbitrarily picking a side.
+function getProfileWeights(profile) {
+  const amplifySet = new Set();
+  const reduceSet = new Set();
+  const addEntry = (entry) => {
+    if (!entry) return;
+    (entry.amplify || []).forEach((rid) => amplifySet.add(rid));
+    (entry.reduce || []).forEach((rid) => reduceSet.add(rid));
+  };
+  if (profile && profile.hairType) addEntry(HAIR_TYPE_WEIGHTS[profile.hairType]);
+  const conditions = (profile && Array.isArray(profile.conditions)) ? profile.conditions : [];
+  conditions.forEach((cid) => addEntry(CONDITION_RULE_WEIGHTS[cid]));
+  const weights = {};
+  amplifySet.forEach((rid) => { weights[rid] = 1.5; });
+  reduceSet.forEach((rid) => { weights[rid] = amplifySet.has(rid) ? 1 : 0.5; });
+  return weights;
+}
+
 function loadProfile() {
   try { return JSON.parse(localStorage.getItem("iq-profile") || "{}"); } catch (_) { return {}; }
 }
@@ -438,6 +506,7 @@ function renderHairGrid() {
   grid.querySelectorAll(".hair-opt").forEach((el) => {
     el.addEventListener("click", () => {
       const p = loadProfile(); p.hairType = el.dataset.type; saveProfile(p);
+      Object.keys(recCache).forEach((k) => delete recCache[k]);
       renderHairGrid(); renderRecList();
     });
   });
@@ -469,7 +538,9 @@ function renderHairConditions() {
       if (idx === -1) arr.push(id); else arr.splice(idx, 1);
       p.conditions = arr;
       saveProfile(p);
+      Object.keys(recCache).forEach((k) => delete recCache[k]);
       renderHairConditions();
+      renderRecList();
     });
   });
 }
@@ -495,11 +566,32 @@ function renderRecTabs() {
   });
 }
 
+function renderProfileWeightNote() {
+  const weights = getProfileWeights(loadProfile());
+  const higher = [];
+  const lower = [];
+  Object.keys(weights).forEach((rid) => {
+    const rule = RULES.ingredients.find((r) => r.id === rid);
+    if (!rule) return;
+    if (weights[rid] > 1) higher.push(rule.label);
+    else if (weights[rid] < 1) lower.push(rule.label);
+  });
+  if (!higher.length && !lower.length) return "";
+  const clauses = [];
+  if (higher.length) clauses.push("Weighted higher: " + higher.join(", "));
+  if (lower.length) clauses.push("Weighted lower: " + lower.join(", "));
+  return "Sorted for your profile — " + clauses.join(". ") + ".";
+}
+
 async function renderRecList() {
   const status = document.getElementById("rec-status");
   const listEl = document.getElementById("rec-list");
+  const weightNote = renderProfileWeightNote();
   if (recCache[currentRecCat]) {
-    renderScoredList(recCache[currentRecCat]);
+    const scored = recCache[currentRecCat];
+    const countNote = scored.length ? ("Top " + scored.length + " by score, out of what Open Beauty Facts has listed for this category with a usable ingredient list.") : "";
+    status.textContent = weightNote ? (weightNote + " " + countNote) : countNote;
+    renderScoredList(scored);
     return;
   }
   status.textContent = "Fetching real " + currentRecCat + " and scoring them…";
@@ -508,13 +600,15 @@ async function renderRecList() {
     const res = await fetch("https://world.openbeautyfacts.org/api/v2/search?categories_tags=" + currentRecCat +
       "&fields=product_name,brands,ingredients_text,image_front_small_url&page_size=24");
     const data = await res.json();
+    const profile = loadProfile();
     const scored = (data.products || [])
       .filter((p) => p.product_name && p.ingredients_text)
-      .map((p) => ({ p, s: scoreIngredients(p.ingredients_text) }))
+      .map((p) => ({ p, s: scoreIngredients(p.ingredients_text, profile) }))
       .sort((a, b) => b.s.score - a.s.score)
       .slice(0, 9);
     recCache[currentRecCat] = scored;
-    status.textContent = scored.length ? ("Top " + scored.length + " by score, out of what Open Beauty Facts has listed for this category with a usable ingredient list.") : "";
+    const countNote = scored.length ? ("Top " + scored.length + " by score, out of what Open Beauty Facts has listed for this category with a usable ingredient list.") : "";
+    status.textContent = weightNote ? (weightNote + " " + countNote) : countNote;
     renderScoredList(scored);
   } catch (e) {
     status.textContent = "Couldn't fetch recommendations — check your connection.";
