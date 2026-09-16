@@ -83,6 +83,7 @@
   <button data-tab="scan" class="active">Scan a product</button>
   <button data-tab="profile">Your hair</button>
   <button data-tab="recs">Recommendations</button>
+  <button data-tab="compare">Compare</button>
 </nav>
 
 <main>
@@ -150,6 +151,16 @@
   <div class="cat-tabs" id="rec-cat-tabs"></div>
   <p class="muted" id="rec-status"></p>
   <div class="prod-list" id="rec-list"></div>
+</section>
+
+<section id="tab-compare">
+  <div class="note-box">
+    Add products from a scan to compare them side by side — the best-scoring one for your
+    profile is shown first. Scores here are always computed fresh against your CURRENT hair
+    profile, never stored from when you added them, so changing your profile updates this too.
+  </div>
+  <p class="muted" id="compare-empty">Nothing to compare yet — scan a product and tap "+ Compare" to add it here.</p>
+  <div id="compare-list"></div>
 </section>
 
 
@@ -280,8 +291,20 @@ function renderResult(product, ingredientsText, barcode) {
   }
   if (ingredientsText) {
     html += '<details style="margin-top:1rem;"><summary style="cursor:pointer;font-weight:600;font-size:0.85rem;">Full ingredient list</summary><p class="muted" style="font-size:0.82rem;">' + esc(ingredientsText) + '</p></details>';
+    html += '<div class="row" style="margin-top:0.8rem;">' +
+      '<button class="ghost" id="btn-add-compare" type="button">+ Compare</button>' +
+      '<span class="muted" id="compare-add-status"></span>' +
+      '</div>';
   }
   card.innerHTML = html;
+  if (ingredientsText) {
+    const addBtn = document.getElementById("btn-add-compare");
+    if (addBtn) {
+      addBtn.addEventListener("click", () => {
+        addToCompare({ name, brand, ingredientsText, barcode: barcode || null, at: Date.now() });
+      });
+    }
+  }
 }
 
 async function lookupBarcode(code) {
@@ -296,7 +319,7 @@ async function lookupBarcode(code) {
       return;
     }
     status.textContent = "Found it.";
-    renderResult(data.product, data.product.ingredients_text);
+    renderResult(data.product, data.product.ingredients_text, code);
   } catch (e) {
     status.textContent = "Lookup failed — check your connection.";
   }
@@ -530,6 +553,76 @@ function loadProfile() {
 }
 function saveProfile(p) { try { localStorage.setItem("iq-profile", JSON.stringify(p)); } catch (_) {} }
 
+// --- Compare list ---
+// Stores the RAW ingredientsText per entry, never a precomputed score -- the same
+// principle as Recommendations: scoreIngredients() runs fresh at render time against
+// whatever the current hair profile is, so this can never show a stale/frozen score.
+const LS_COMPARE = "iq-compare-v001";
+const COMPARE_MAX = 4;
+function loadCompareList() {
+  try { return JSON.parse(localStorage.getItem(LS_COMPARE) || "[]"); } catch (_) { return []; }
+}
+function saveCompareList(list) {
+  try { localStorage.setItem(LS_COMPARE, JSON.stringify(list.slice(0, COMPARE_MAX))); } catch (_) {}
+}
+function addToCompare(entry) {
+  const list = loadCompareList();
+  const statusEl = document.getElementById("compare-add-status");
+  if (entry.barcode && list.some((e) => e.barcode === entry.barcode)) {
+    if (statusEl) statusEl.textContent = "Already in your compare list.";
+    return;
+  }
+  if (list.length >= COMPARE_MAX) {
+    if (statusEl) statusEl.textContent = "Compare list is full (" + COMPARE_MAX + " max) — remove one from the Compare tab first.";
+    return;
+  }
+  list.push(entry);
+  saveCompareList(list);
+  if (statusEl) statusEl.textContent = "Added to Compare.";
+  renderCompareList(); // re-render now so switching to Compare shows it immediately
+}
+function renderCompareList() {
+  const emptyEl = document.getElementById("compare-empty");
+  const listEl = document.getElementById("compare-list");
+  if (!listEl) return;
+  const list = loadCompareList();
+  if (!list.length) {
+    if (emptyEl) emptyEl.style.display = "block";
+    listEl.innerHTML = "";
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = "none";
+  const profile = loadProfile();
+  const scored = list
+    .map((entry) => ({ entry, s: scoreIngredients(entry.ingredientsText, profile) }))
+    .sort((a, b) => b.s.score - a.s.score);
+  listEl.innerHTML = scored.map(({ entry, s }, idx) => {
+    const c = scoreColor(s.score);
+    const topFlags = s.hits.slice().sort((a, b) => b.appliedPoints - a.appliedPoints).slice(0, 2);
+    const flagsHtml = topFlags.length
+      ? topFlags.map((h) => '<div class="muted" style="font-size:0.8rem;">' + esc(h.label) + ' (-' + h.appliedPoints + ' pts)</div>').join("")
+      : '<div class="muted" style="font-size:0.8rem;">No flagged ingredients</div>';
+    const bestBadge = (idx === 0 && scored.length >= 2)
+      ? '<div class="prod-score" style="color:var(--good);background:var(--good-bg);margin-bottom:0.5rem;">Best match for you</div>'
+      : '';
+    return '<div class="prod-card" style="margin-bottom:0.8rem;">' +
+      bestBadge +
+      '<div class="name">' + esc(entry.name) + '</div>' +
+      (entry.brand ? '<div class="brand">' + esc(entry.brand) + '</div>' : '') +
+      '<span class="prod-score" style="color:' + c.fg + ';background:' + c.bg + ';">' + s.score + '/100</span>' +
+      '<div style="margin-top:0.5rem;">' + flagsHtml + '</div>' +
+      '<button class="ghost" type="button" data-at="' + entry.at + '" style="margin-top:0.7rem;">✕ Remove</button>' +
+      '</div>';
+  }).join("");
+  listEl.querySelectorAll("button[data-at]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const at = Number(btn.dataset.at);
+      saveCompareList(loadCompareList().filter((e) => e.at !== at));
+      renderCompareList();
+    });
+  });
+}
+
 function renderHairGrid() {
   // NOTE: profile.hairType may still hold an old single-digit id ("1"-"4") saved before
   // the 12-subtype grid existed. None of the current HAIR_TYPES ids match a bare digit,
@@ -673,6 +766,7 @@ document.querySelectorAll("nav button").forEach((btn) => {
     document.querySelectorAll("main section").forEach((s) => s.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    if (btn.dataset.tab === "compare") renderCompareList();
   });
 });
 
@@ -697,6 +791,7 @@ document.getElementById("btn-search-name").addEventListener("click", () => {
   renderHairConditions();
   renderRecTabs();
   renderRecList();
+  renderCompareList();
 
   // Shareable scan results: ?barcode=<code> pre-fills and looks up on load,
   // so a result can be linked or bookmarked, not just reached by re-scanning.
