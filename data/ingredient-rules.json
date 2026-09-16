@@ -1,0 +1,86 @@
+{
+  "version": "0.1",
+  "methodology": "Every product starts at 100. Each matched ingredient below subtracts its listed points, once per match. Score floors at 5 (never 0 -- this is a simplified consumer heuristic, not a toxicology report, and shouldn't read as 'this will hurt you'). The full list of what matched and how many points each cost is always shown -- nothing is hidden in a black-box number. This is one transparent way of reading a label, built from well-documented, widely-cited consumer ingredient concerns (the kind you'll find on INCI/ingredient-decoder sites) -- it is not a medical, dermatological, or regulatory judgment, and it doesn't know your personal allergies or sensitivities. When in doubt about a real reaction, ask a dermatologist, not an app.",
+  "ingredients": [
+    {
+      "match": ["sodium lauryl sulfate", "sls"],
+      "label": "Sodium Lauryl Sulfate (SLS)",
+      "points": 10,
+      "severity": "medium",
+      "kid_explainer": "This is a strong soap that makes big bubbles. It's really good at cleaning, but it also washes away the healthy oils your hair needs -- kind of like washing a soft stuffed animal with dish soap. Your hair can end up feeling dry and rough afterward.",
+      "why": "A strong anionic surfactant. Effective cleanser but can strip natural sebum, leaving hair and scalp dry, and can irritate sensitive skin with repeated use."
+    },
+    {
+      "match": ["sodium laureth sulfate", "sles", "sodium myreth sulfate"],
+      "label": "Sodium Laureth Sulfate (SLES)",
+      "points": 6,
+      "severity": "low",
+      "kid_explainer": "This is a gentler cousin of the strong soap above. It still cleans really well but is a little less rough on your hair.",
+      "why": "Milder than SLS but still a strong cleanser; can dry out hair with frequent use. Manufacturing can leave trace 1,4-dioxane, a byproduct regulators have flagged for reduction, though it isn't an added ingredient."
+    },
+    {
+      "match": ["methylparaben", "propylparaben", "butylparaben", "isobutylparaben", "ethylparaben"],
+      "label": "Parabens",
+      "points": 15,
+      "severity": "high",
+      "kid_explainer": "This is like putting a tiny preservative guard in the bottle so it doesn't grow mold, kind of like keeping your lunch in the fridge. Scientists are still studying whether using a lot of this stuff over many years could confuse hormones in your body.",
+      "why": "Preservatives that some studies suggest may mimic estrogen (endocrine disruption). Evidence is still debated, but several parabens are restricted in the EU at higher concentrations, so many brands avoid them as a precaution."
+    },
+    {
+      "match": ["dmdm hydantoin", "quaternium-15", "diazolidinyl urea", "imidazolidinyl urea", "sodium hydroxymethylglycinate"],
+      "label": "Formaldehyde-releasing preservative",
+      "points": 15,
+      "severity": "high",
+      "kid_explainer": "This ingredient slowly lets out tiny, tiny puffs of a chemical called formaldehyde to keep germs from growing -- the same chemical museums use to keep old things from rotting. A little over a long time can bother your eyes, nose, or skin.",
+      "why": "Releases small amounts of formaldehyde over time to prevent microbial growth. Formaldehyde is a recognized skin/eye irritant and classified as a human carcinogen at high, repeated exposure -- the amounts here are tiny, but it's a well-documented reason people look for 'formaldehyde-free' labels."
+    },
+    {
+      "match": ["phthalate", "dbp", "dep"],
+      "label": "Phthalates",
+      "points": 15,
+      "severity": "high",
+      "kid_explainer": "This chemical is often hidden inside the word 'fragrance' on the label -- companies don't have to say exactly what's in their scent recipe. Some scientists worry it can affect how your body's hormones work.",
+      "why": "Often used to make fragrance last longer, and frequently hidden under the generic 'fragrance/parfum' label. Linked to endocrine disruption in multiple studies; increasingly phased out but still found in some products."
+    },
+    {
+      "match": ["triclosan"],
+      "label": "Triclosan",
+      "points": 15,
+      "severity": "high",
+      "kid_explainer": "This is a strong germ-killer, like tiny soldiers fighting bacteria. But it's so strong that scientists worry it might mess with hormones and help create 'super germs' that are harder to kill.",
+      "why": "An antibacterial agent linked to hormone disruption and antibiotic resistance concerns. Banned from hand soaps in the US (FDA, 2016) and phased out of many personal care products since."
+    },
+    {
+      "match": ["alcohol denat", "sd alcohol", "isopropyl alcohol", "alcohol denat."],
+      "label": "Denatured/Isopropyl Alcohol",
+      "points": 8,
+      "severity": "medium",
+      "kid_explainer": "This is a fast-drying liquid, like hand sanitizer. It helps a product dry quickly on your hair, but it can also suck the moisture out, making hair feel dry and a bit brittle, like a dry twig.",
+      "why": "Short-chain 'drying' alcohols evaporate quickly and can dehydrate hair with regular use -- different from fatty alcohols (cetyl, stearyl, cetearyl) which are actually moisturizing and not flagged here."
+    },
+    {
+      "match": ["dimethicone", "cyclopentasiloxane", "amodimethicone", "cyclomethicone", "dimethiconol"],
+      "label": "Silicones",
+      "points": 4,
+      "severity": "low",
+      "kid_explainer": "Think of this like a tiny, smooth raincoat wrapped around each hair. It makes hair feel silky and shiny right away. But if you don't wash it out well sometimes, it can build up like a plastic layer and make hair feel heavy or flat over time -- especially for fine, thin hair.",
+      "why": "Not toxic -- this is a build-up/compatibility note, not a safety flag. Great for smoothing and shine, especially on coarse or curly hair, but can accumulate on fine or low-porosity hair without regular clarifying washes."
+    },
+    {
+      "match": ["mineral oil", "petrolatum", "paraffinum liquidum"],
+      "label": "Mineral Oil / Petrolatum",
+      "points": 3,
+      "severity": "low",
+      "kid_explainer": "This is a smooth, protective oil, kind of like putting a raincoat over your hair to lock moisture in. It works well for a lot of people, but for some hair types it can feel heavy or greasy instead of soaking in.",
+      "why": "Cosmetic-grade mineral oil/petrolatum is well-refined and considered safe by major dermatology bodies; flagged lightly here only because it can feel heavy on fine hair and doesn't absorb the way plant oils do."
+    },
+    {
+      "match": ["fragrance", "parfum"],
+      "label": "Undisclosed Fragrance",
+      "points": 5,
+      "severity": "low",
+      "kid_explainer": "Companies don't have to tell you exactly what makes up the smell in a product -- they can just write one word, 'fragrance', to cover a whole secret recipe of scent chemicals. That makes it hard to know exactly what you're putting on your hair.",
+      "why": "'Fragrance' can legally hide dozens of undisclosed chemicals, including allergens and sometimes phthalates. Not inherently dangerous, but a transparency gap that makes it harder to identify what's actually triggering a reaction if you have sensitive skin."
+    }
+  ]
+}

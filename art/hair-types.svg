@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 320" width="1000" height="320">
+  <defs>
+    <style>
+      .strand { fill: none; stroke: #3C3489; stroke-width: 5; stroke-linecap: round; }
+      .label { font-family: Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700; fill: #26215C; }
+      .sub { font-family: Arial, Helvetica, sans-serif; font-size: 13px; fill: #5F5E5A; }
+      .card { fill: #F1EFE8; stroke: #D3D1C7; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <!-- Type 1: Straight -->
+  <rect class="card" x="10" y="10" width="230" height="300" rx="14"/>
+  <path class="strand" d="M 60 60 L 60 200"/>
+  <path class="strand" d="M 90 50 L 90 210"/>
+  <path class="strand" d="M 120 60 L 120 200"/>
+  <path class="strand" d="M 150 50 L 150 210"/>
+  <path class="strand" d="M 180 60 L 180 200"/>
+  <text class="label" x="125" y="240" text-anchor="middle">Type 1</text>
+  <text class="sub" x="125" y="262" text-anchor="middle">Straight</text>
+  <text class="sub" x="125" y="280" text-anchor="middle">No natural curl,</text>
+  <text class="sub" x="125" y="295" text-anchor="middle">reflects oil fastest</text>
+
+  <!-- Type 2: Wavy -->
+  <rect class="card" x="260" y="10" width="230" height="300" rx="14"/>
+  <path class="strand" d="M 310 60 Q 330 100 310 140 Q 290 180 310 210"/>
+  <path class="strand" d="M 345 55 Q 365 95 345 135 Q 325 175 345 210"/>
+  <path class="strand" d="M 380 60 Q 400 100 380 140 Q 360 180 380 210"/>
+  <path class="strand" d="M 415 55 Q 435 95 415 135 Q 395 175 415 210"/>
+  <text class="label" x="375" y="240" text-anchor="middle">Type 2</text>
+  <text class="sub" x="375" y="262" text-anchor="middle">Wavy</text>
+  <text class="sub" x="375" y="280" text-anchor="middle">S-shaped bends,</text>
+  <text class="sub" x="375" y="295" text-anchor="middle">2A loose to 2C defined</text>
+
+  <!-- Type 3: Curly -->
+  <rect class="card" x="510" y="10" width="230" height="300" rx="14"/>
+  <path class="strand" d="M 560 55 C 590 55 590 95 560 95 C 530 95 530 135 560 135 C 590 135 590 175 560 175 C 530 175 530 210 555 215"/>
+  <path class="strand" d="M 610 55 C 640 55 640 95 610 95 C 580 95 580 135 610 135 C 640 135 640 175 610 175 C 580 175 580 210 605 215"/>
+  <path class="strand" d="M 660 55 C 690 55 690 95 660 95 C 630 95 630 135 660 135 C 690 135 690 175 660 175 C 630 175 630 210 655 215"/>
+  <text class="label" x="625" y="240" text-anchor="middle">Type 3</text>
+  <text class="sub" x="625" y="262" text-anchor="middle">Curly</text>
+  <text class="sub" x="625" y="280" text-anchor="middle">Springy loops,</text>
+  <text class="sub" x="625" y="295" text-anchor="middle">3A loose to 3C tight coils</text>
+
+  <!-- Type 4: Coily -->
+  <rect class="card" x="760" y="10" width="230" height="300" rx="14"/>
+  <path class="strand" d="M 810 60 C 830 45 830 75 810 70 C 790 65 790 95 810 90 C 830 85 830 115 810 110 C 790 105 790 135 810 130 C 830 125 830 155 810 150 C 800 148 798 175 802 195"/>
+  <path class="strand" d="M 860 60 C 880 45 880 75 860 70 C 840 65 840 95 860 90 C 880 85 880 115 860 110 C 840 105 840 135 860 130 C 880 125 880 155 860 150 C 850 148 848 175 852 195"/>
+  <path class="strand" d="M 910 60 C 930 45 930 75 910 70 C 890 65 890 95 910 90 C 930 85 930 115 910 110 C 890 105 890 135 910 130 C 930 125 930 155 910 150 C 900 148 898 175 902 195"/>
+  <text class="label" x="875" y="240" text-anchor="middle">Type 4</text>
+  <text class="sub" x="875" y="262" text-anchor="middle">Coily</text>
+  <text class="sub" x="875" y="280" text-anchor="middle">Tight zig-zag or</text>
+  <text class="sub" x="875" y="295" text-anchor="middle">z-pattern, most fragile</text>
+</svg>

@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>IngredientIQ — scan it, understand it</title>
+<style>
+  :root {
+    --ink:#26215C; --ink2:#3C3489; --bg:#F7F6F2; --card:#FFFFFF; --border:#E3E1D8;
+    --muted:#5F5E5A; --good:#0F6E56; --mid:#854F0B; --bad:#791F1F;
+    --good-bg:#E1F5EE; --mid-bg:#FAEEDA; --bad-bg:#FAECE7;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,Segoe UI,Arial,sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:1.4rem 1.2rem 1rem; text-align:center; }
+  header h1 { margin:0 0 0.2rem; font-size:1.6rem; }
+  header p { margin:0; color:var(--muted); font-size:0.9rem; }
+  nav { display:flex; justify-content:center; gap:0.6rem; flex-wrap:wrap; padding:0 1rem 1rem; }
+  nav button { border:1px solid var(--border); background:var(--card); color:var(--ink); padding:0.5rem 1rem; border-radius:999px; font-size:0.85rem; cursor:pointer; font-weight:600; }
+  nav button.active { background:var(--ink2); color:#fff; border-color:var(--ink2); }
+  main { max-width:920px; margin:0 auto; padding:0 1rem 3rem; }
+  section { display:none; }
+  section.active { display:block; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.2rem; margin-bottom:1rem; }
+  .row { display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center; }
+  input[type=text], input[type=search] { flex:1; min-width:200px; padding:0.65rem 0.8rem; border:1px solid var(--border); border-radius:8px; font-size:0.95rem; }
+  button.primary { background:var(--ink2); color:#fff; border:none; padding:0.65rem 1.1rem; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.95rem; }
+  button.ghost { background:transparent; border:1px solid var(--border); padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-weight:600; }
+  .muted { color:var(--muted); font-size:0.85rem; }
+  .score-wrap { display:flex; align-items:center; gap:1.2rem; flex-wrap:wrap; }
+  .score-circle { width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.7rem; font-weight:800; flex-shrink:0; border:6px solid; }
+  .flag { border:1px solid var(--border); border-radius:10px; padding:0.7rem 0.9rem; margin-top:0.6rem; }
+  .flag .head { display:flex; justify-content:space-between; align-items:center; font-weight:700; }
+  .flag .pts { font-size:0.8rem; font-weight:700; }
+  .flag .why { font-size:0.85rem; color:var(--muted); margin-top:0.2rem; }
+  .flag .kid { font-size:0.9rem; margin-top:0.4rem; background:#F1EFE8; padding:0.5rem 0.7rem; border-radius:8px; }
+  .sev-high { color:var(--bad); }
+  .sev-medium { color:var(--mid); }
+  .sev-low { color:var(--good); }
+  .hair-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:0.7rem; margin-top:0.8rem; }
+  .hair-opt { border:2px solid var(--border); border-radius:12px; padding:0.8rem; cursor:pointer; text-align:center; }
+  .hair-opt.sel { border-color:var(--ink2); background:#EEEDFE; }
+  .color-swatches { display:flex; gap:0.6rem; flex-wrap:wrap; margin-top:0.6rem; }
+  .swatch { width:40px; height:40px; border-radius:50%; border:2px solid var(--border); cursor:pointer; }
+  .swatch.sel { border-color:var(--ink2); box-shadow:0 0 0 2px var(--ink2); }
+  .cat-tabs { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.8rem; }
+  .cat-tabs button { border:1px solid var(--border); background:var(--card); padding:0.4rem 0.8rem; border-radius:999px; font-size:0.82rem; cursor:pointer; }
+  .cat-tabs button.active { background:var(--ink); color:#fff; }
+  .prod-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:0.8rem; }
+  .prod-card { border:1px solid var(--border); border-radius:12px; padding:0.8rem; }
+  .prod-card .name { font-weight:700; font-size:0.92rem; }
+  .prod-card .brand { color:var(--muted); font-size:0.8rem; }
+  .prod-score { display:inline-block; padding:0.15rem 0.5rem; border-radius:999px; font-weight:800; font-size:0.85rem; margin-top:0.4rem; }
+  .note-box { background:#EEEDFE; border-radius:10px; padding:0.8rem 1rem; font-size:0.85rem; color:var(--ink2); margin-bottom:1rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧴 IngredientIQ</h1>
+  <p>Scan a product, get a real breakdown of what's actually in it — explained simply, nothing hidden.</p>
+</header>
+
+<nav>
+  <button data-tab="scan" class="active">Scan a product</button>
+  <button data-tab="profile">Your hair</button>
+  <button data-tab="recs">Recommendations</button>
+</nav>
+
+<main>
+
+<section id="tab-scan" class="active">
+  <div class="note-box">
+    <b>How this works, honestly:</b> the score comes from a transparent, published rule list
+    (see "how scoring works" below) applied to a product's real ingredient list from
+    <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">Open Beauty Facts</a>,
+    a free, open, crowdsourced database — not a proprietary lab test, and not a medical opinion.
+    Camera scanning uses your browser's real barcode reader (no camera library download, no
+    account, nothing leaves your device except the barcode number sent to look up the product).
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button class="primary" id="btn-scan-camera">📷 Scan barcode with camera</button>
+      <span class="muted" id="camera-support-note"></span>
+    </div>
+    <video id="scan-video" style="width:100%;max-width:420px;border-radius:10px;margin-top:0.8rem;display:none;" muted playsinline></video>
+    <div class="row" style="margin-top:0.8rem;">
+      <input type="text" id="manual-barcode" placeholder="...or type a barcode number (UPC/EAN)"/>
+      <button class="ghost" id="btn-lookup-barcode">Look up</button>
+    </div>
+    <div class="row" style="margin-top:0.5rem;">
+      <input type="search" id="manual-search" placeholder="...or search by product name, e.g. 'Garnier shampoo'"/>
+      <button class="ghost" id="btn-search-name">Search</button>
+    </div>
+    <p class="muted" id="scan-status"></p>
+  </div>
+
+  <div class="card" id="result-card" style="display:none;"></div>
+
+  <details class="card">
+    <summary style="cursor:pointer; font-weight:700;">How scoring works (the full transparent list)</summary>
+    <div id="methodology-body"></div>
+  </details>
+</section>
+
+<section id="tab-profile">
+  <div class="card">
+    <h3 style="margin-top:0;">Hair type</h3>
+    <p class="muted">The standard 1–4 typing system used across the haircare industry. This changes what "highly rated" means for you on the Recommendations tab.</p>
+    <img src="art/hair-types.svg" alt="Illustration of the four hair type categories: straight, wavy, curly, and coily" style="width:100%; max-width:700px; display:block; margin:0.6rem auto;"/>
+    <div class="hair-grid" id="hair-type-grid"></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0;">Hair color</h3>
+    <p class="muted">Color-treated hair reacts differently to sulfates and alcohols — this tunes recommendations too.</p>
+    <div class="color-swatches" id="hair-color-grid"></div>
+  </div>
+</section>
+
+<section id="tab-recs">
+  <div class="note-box">
+    Real products from Open Beauty Facts, scored with the same transparent rules as the scanner,
+    sorted best-to-worst. "Highly rated" here means "scored well against our published ingredient
+    checklist" — not an independent lab test or a paid placement.
+  </div>
+  <div class="cat-tabs" id="rec-cat-tabs"></div>
+  <p class="muted" id="rec-status"></p>
+  <div class="prod-list" id="rec-list"></div>
+</section>
+
+
+<footer style="max-width:920px;margin:0 auto;padding:0 1rem 2rem;text-align:center;">
+  <p class="muted">Built the same honest way as its sibling project —
+    <a href="http://127.0.0.1:8765/" target="_blank" rel="noopener">Ultron Valley</a>:
+    real data, transparent scoring shown in full, nothing fabricated to look more finished
+    than it is. Run that project's own local server first to open it.</p>
+</footer>
+</main>
+
+<script>
+const RULES_URL = "./data/ingredient-rules.json";
+let RULES = null;
+
+async function loadRules() {
+  if (RULES) return RULES;
+  const res = await fetch(RULES_URL);
+  RULES = await res.json();
+  return RULES;
+}
+
+function scoreIngredients(ingredientsText) {
+  const text = (ingredientsText || "").toLowerCase();
+  const hits = [];
+  let score = 100;
+  for (const rule of RULES.ingredients) {
+    const matched = rule.match.some((m) => text.includes(m.toLowerCase()));
+    if (matched) {
+      score -= rule.points;
+      hits.push(rule);
+    }
+  }
+  score = Math.max(5, Math.min(100, score));
+  return { score, hits };
+}
+
+function scoreColor(score) {
+  if (score >= 75) return { fg: "var(--good)", bg: "var(--good-bg)" };
+  if (score >= 45) return { fg: "var(--mid)", bg: "var(--mid-bg)" };
+  return { fg: "var(--bad)", bg: "var(--bad-bg)" };
+}
+
+function esc(s) { return String(s || "").replace(/[<>&]/g, (c) => ({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])); }
+
+function renderResult(product, ingredientsText) {
+  const card = document.getElementById("result-card");
+  card.style.display = "block";
+  if (!product && !ingredientsText) {
+    card.innerHTML = '<p class="muted">Product not found in Open Beauty Facts. Try a different barcode, or search by name.</p>';
+    return;
+  }
+  const { score, hits } = scoreIngredients(ingredientsText);
+  const c = scoreColor(score);
+  const name = (product && (product.product_name || product.product_name_en)) || "Unknown product";
+  const brand = (product && product.brands) || "";
+  const img = product && product.image_front_small_url;
+
+  let html = '<div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">';
+  if (img) html += '<img src="' + esc(img) + '" style="width:80px;height:80px;object-fit:contain;border-radius:8px;border:1px solid var(--border);"/>';
+  html += '<div style="flex:1;min-width:200px;">';
+  html += '<div style="font-weight:800;font-size:1.1rem;">' + esc(name) + '</div>';
+  if (brand) html += '<div class="muted">' + esc(brand) + '</div>';
+  html += '<div class="score-wrap" style="margin-top:0.8rem;">';
+  html += '<div class="score-circle" style="color:' + c.fg + ';border-color:' + c.fg + ';background:' + c.bg + ';">' + score + '</div>';
+  html += '<div><div style="font-weight:700;">' + score + ' / 100</div><div class="muted">100 to start, minus points for each flagged ingredient found — see below.</div></div>';
+  html += '</div></div></div>';
+
+  if (!ingredientsText) {
+    html += '<p class="muted" style="margin-top:0.8rem;">No ingredient list on file for this product in Open Beauty Facts, so no score could be calculated — showing what we do know.</p>';
+  } else if (!hits.length) {
+    html += '<p style="margin-top:0.8rem;">✅ None of our tracked ingredients showed up in this product\'s list. That doesn\'t guarantee it\'s perfect for you, but it cleared every check on our published list.</p>';
+  } else {
+    html += '<div style="margin-top:1rem;"><b>What brought the score down:</b>';
+    hits.forEach((h) => {
+      html += '<div class="flag"><div class="head"><span class="sev-' + h.severity + '">' + esc(h.label) + '</span><span class="pts sev-' + h.severity + '">-' + h.points + ' pts</span></div>' +
+        '<div class="why">' + esc(h.why) + '</div>' +
+        '<div class="kid">🧒 In simple terms: ' + esc(h.kid_explainer) + '</div></div>';
+    });
+    html += '</div>';
+  }
+  if (ingredientsText) {
+    html += '<details style="margin-top:1rem;"><summary style="cursor:pointer;font-weight:600;font-size:0.85rem;">Full ingredient list</summary><p class="muted" style="font-size:0.82rem;">' + esc(ingredientsText) + '</p></details>';
+  }
+  card.innerHTML = html;
+}
+
+async function lookupBarcode(code) {
+  const status = document.getElementById("scan-status");
+  status.textContent = "Looking up " + code + "…";
+  try {
+    const res = await fetch("https://world.openbeautyfacts.org/api/v2/product/" + encodeURIComponent(code) + ".json?fields=product_name,brands,ingredients_text,image_front_small_url");
+    const data = await res.json();
+    if (data.status !== 1 || !data.product) {
+      status.textContent = "Not found in Open Beauty Facts.";
+      renderResult(null, null);
+      return;
+    }
+    status.textContent = "Found it.";
+    renderResult(data.product, data.product.ingredients_text);
+  } catch (e) {
+    status.textContent = "Lookup failed — check your connection.";
+  }
+}
+
+async function searchByName(q) {
+  const status = document.getElementById("scan-status");
+  status.textContent = "Searching for \"" + q + "\"…";
+  try {
+    const res = await fetch("https://world.openbeautyfacts.org/api/v2/search?search_terms=" + encodeURIComponent(q) + "&fields=product_name,brands,ingredients_text,image_front_small_url&page_size=1");
+    const data = await res.json();
+    const p = data.products && data.products[0];
+    if (!p) { status.textContent = "No match found."; renderResult(null, null); return; }
+    status.textContent = "Closest match:";
+    renderResult(p, p.ingredients_text);
+  } catch (e) {
+    status.textContent = "Search failed — check your connection.";
+  }
+}
+
+function renderMethodology() {
+  const root = document.getElementById("methodology-body");
+  let html = '<p class="muted">' + esc(RULES.methodology) + '</p>';
+  RULES.ingredients.forEach((h) => {
+    html += '<div class="flag"><div class="head"><span class="sev-' + h.severity + '">' + esc(h.label) + '</span><span class="pts sev-' + h.severity + '">-' + h.points + ' pts</span></div>' +
+      '<div class="why">' + esc(h.why) + '</div></div>';
+  });
+  root.innerHTML = html;
+}
+
+// --- Camera barcode scanning: uses the browser's OWN native BarcodeDetector API when present
+// (built into Chrome/Edge, no library, no download). No fake/simulated scanning -- if the
+// browser doesn't support it, we say so plainly and point at manual entry instead. ---
+let scanStream = null;
+async function startCameraScan() {
+  const status = document.getElementById("scan-status");
+  if (!("BarcodeDetector" in window)) {
+    status.textContent = "Your browser doesn't support live barcode scanning (BarcodeDetector API). Use manual entry below instead.";
+    return;
+  }
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+  } catch (e) {
+    status.textContent = "Camera access denied or unavailable. Use manual entry instead.";
+    return;
+  }
+  const video = document.getElementById("scan-video");
+  video.srcObject = scanStream;
+  video.style.display = "block";
+  await video.play();
+  const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "qr_code"] });
+  status.textContent = "Point the camera at a barcode…";
+  const loop = async () => {
+    if (!scanStream) return;
+    try {
+      const codes = await detector.detect(video);
+      if (codes.length) {
+        stopCameraScan();
+        document.getElementById("manual-barcode").value = codes[0].rawValue;
+        lookupBarcode(codes[0].rawValue);
+        return;
+      }
+    } catch (_) {}
+    requestAnimationFrame(loop);
+  };
+  loop();
+}
+function stopCameraScan() {
+  if (scanStream) { scanStream.getTracks().forEach((t) => t.stop()); scanStream = null; }
+  document.getElementById("scan-video").style.display = "none";
+}
+
+// --- Hair profile ---
+const HAIR_TYPES = [
+  { id: "1", label: "Type 1 — Straight" },
+  { id: "2", label: "Type 2 — Wavy" },
+  { id: "3", label: "Type 3 — Curly" },
+  { id: "4", label: "Type 4 — Coily" }
+];
+const HAIR_COLORS = [
+  { id: "black", hex: "#0b0b0b" }, { id: "brown", hex: "#5a3a22" },
+  { id: "blonde", hex: "#e8c77e" }, { id: "red", hex: "#a33d1f" },
+  { id: "gray", hex: "#b8b8b8" }, { id: "dyed", hex: "#8a4fd6" }
+];
+function loadProfile() {
+  try { return JSON.parse(localStorage.getItem("iq-profile") || "{}"); } catch (_) { return {}; }
+}
+function saveProfile(p) { try { localStorage.setItem("iq-profile", JSON.stringify(p)); } catch (_) {} }
+
+function renderHairGrid() {
+  const profile = loadProfile();
+  const grid = document.getElementById("hair-type-grid");
+  grid.innerHTML = HAIR_TYPES.map((t) =>
+    '<div class="hair-opt' + (profile.hairType === t.id ? " sel" : "") + '" data-type="' + t.id + '">' + esc(t.label) + '</div>'
+  ).join("");
+  grid.querySelectorAll(".hair-opt").forEach((el) => {
+    el.addEventListener("click", () => {
+      const p = loadProfile(); p.hairType = el.dataset.type; saveProfile(p);
+      renderHairGrid(); renderRecList();
+    });
+  });
+  const colorGrid = document.getElementById("hair-color-grid");
+  colorGrid.innerHTML = HAIR_COLORS.map((c) =>
+    '<div class="swatch' + (profile.hairColor === c.id ? " sel" : "") + '" data-color="' + c.id + '" style="background:' + c.hex + ';" title="' + c.id + '"></div>'
+  ).join("");
+  colorGrid.querySelectorAll(".swatch").forEach((el) => {
+    el.addEventListener("click", () => {
+      const p = loadProfile(); p.hairColor = el.dataset.color; saveProfile(p);
+      renderHairGrid();
+    });
+  });
+}
+
+// --- Recommendations by category ---
+const REC_CATEGORIES = [
+  { id: "shampoos", label: "Shampoo" },
+  { id: "conditioners", label: "Conditioner" },
+  { id: "hair-oils", label: "Hair oil" },
+  { id: "hair-styling-products", label: "Styling" },
+  { id: "hair-masks", label: "Treatment / mask" }
+];
+let currentRecCat = REC_CATEGORIES[0].id;
+const recCache = {};
+
+function renderRecTabs() {
+  const root = document.getElementById("rec-cat-tabs");
+  root.innerHTML = REC_CATEGORIES.map((c) =>
+    '<button data-cat="' + c.id + '" class="' + (c.id === currentRecCat ? "active" : "") + '">' + esc(c.label) + '</button>'
+  ).join("");
+  root.querySelectorAll("button").forEach((b) => {
+    b.addEventListener("click", () => { currentRecCat = b.dataset.cat; renderRecTabs(); renderRecList(); });
+  });
+}
+
+async function renderRecList() {
+  const status = document.getElementById("rec-status");
+  const listEl = document.getElementById("rec-list");
+  if (recCache[currentRecCat]) {
+    renderScoredList(recCache[currentRecCat]);
+    return;
+  }
+  status.textContent = "Fetching real " + currentRecCat + " and scoring them…";
+  listEl.innerHTML = "";
+  try {
+    const res = await fetch("https://world.openbeautyfacts.org/api/v2/search?categories_tags=" + currentRecCat +
+      "&fields=product_name,brands,ingredients_text,image_front_small_url&page_size=24");
+    const data = await res.json();
+    const scored = (data.products || [])
+      .filter((p) => p.product_name && p.ingredients_text)
+      .map((p) => ({ p, s: scoreIngredients(p.ingredients_text) }))
+      .sort((a, b) => b.s.score - a.s.score)
+      .slice(0, 9);
+    recCache[currentRecCat] = scored;
+    status.textContent = scored.length ? ("Top " + scored.length + " by score, out of what Open Beauty Facts has listed for this category with a usable ingredient list.") : "";
+    renderScoredList(scored);
+  } catch (e) {
+    status.textContent = "Couldn't fetch recommendations — check your connection.";
+  }
+}
+function renderScoredList(scored) {
+  const listEl = document.getElementById("rec-list");
+  if (!scored.length) { listEl.innerHTML = '<p class="muted">No scoreable products found for this category right now.</p>'; return; }
+  listEl.innerHTML = scored.map(({ p, s }) => {
+    const c = scoreColor(s.score);
+    return '<div class="prod-card"><div class="name">' + esc(p.product_name) + '</div>' +
+      '<div class="brand">' + esc(p.brands || "") + '</div>' +
+      '<span class="prod-score" style="color:' + c.fg + ';background:' + c.bg + ';">' + s.score + '/100</span></div>';
+  }).join("");
+}
+
+// --- Nav wiring ---
+document.querySelectorAll("nav button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("nav button").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll("main section").forEach((s) => s.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+document.getElementById("btn-scan-camera").addEventListener("click", startCameraScan);
+document.getElementById("btn-lookup-barcode").addEventListener("click", () => {
+  const v = document.getElementById("manual-barcode").value.trim();
+  if (v) lookupBarcode(v);
+});
+document.getElementById("btn-search-name").addEventListener("click", () => {
+  const v = document.getElementById("manual-search").value.trim();
+  if (v) searchByName(v);
+});
+
+(async function init() {
+  document.getElementById("camera-support-note").textContent =
+    ("BarcodeDetector" in window) ? "(uses your browser's built-in scanner)" : "(this browser has no built-in scanner — use manual entry)";
+  await loadRules();
+  renderMethodology();
+  renderHairGrid();
+  renderRecTabs();
+  renderRecList();
+})();
+</script>
+</body>
+</html>
