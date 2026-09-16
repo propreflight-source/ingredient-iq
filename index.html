@@ -50,8 +50,10 @@
   .sev-medium { color:var(--mid); }
   .sev-low { color:var(--good); }
   .hair-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:0.7rem; margin-top:0.8rem; }
-  .hair-opt { border:2px solid var(--border); border-radius:12px; padding:0.8rem; cursor:pointer; text-align:center; }
+  .hair-opt { border:2px solid var(--border); border-radius:12px; padding:0.8rem; cursor:pointer; text-align:center; min-height:44px; display:flex; align-items:center; justify-content:center; }
   .hair-opt.sel { border-color:var(--ink2); background:#EEEDFE; }
+  .hair-group-label { margin:0.9rem 0 0.3rem; font-size:0.85rem; font-weight:700; color:var(--ink2); }
+  .hair-group-label:first-child { margin-top:0.2rem; }
   .color-swatches { display:flex; gap:0.6rem; flex-wrap:wrap; margin-top:0.6rem; }
   .swatch { width:40px; height:40px; border-radius:50%; border:2px solid var(--border); cursor:pointer; }
   .swatch.sel { border-color:var(--ink2); box-shadow:0 0 0 2px var(--ink2); }
@@ -131,6 +133,11 @@
     <h3 style="margin-top:0;">Hair color</h3>
     <p class="muted">Color-treated hair reacts differently to sulfates and alcohols — this tunes recommendations too.</p>
     <div class="color-swatches" id="hair-color-grid"></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0;">Hair conditions</h3>
+    <p class="muted">Select anything that applies — this can help tailor what counts as a stronger or weaker concern for you.</p>
+    <div class="hair-grid" id="hair-conditions-grid"></div>
   </div>
 </section>
 
@@ -371,11 +378,38 @@ function stopCameraScan() {
 }
 
 // --- Hair profile ---
-const HAIR_TYPES = [
+// The standard 1-4 Andre Walker hair typing system as commonly extended with A/B/C
+// sub-types (straight/wavy/curly/coily, each split fine-to-coarse or loose-to-tight).
+// Grouped under 4 headings below so 12 options don't read as one undifferentiated wall
+// of buttons on a phone screen.
+const HAIR_TYPE_GROUPS = [
   { id: "1", label: "Type 1 — Straight" },
   { id: "2", label: "Type 2 — Wavy" },
   { id: "3", label: "Type 3 — Curly" },
   { id: "4", label: "Type 4 — Coily" }
+];
+const HAIR_TYPES = [
+  { id: "1a", label: "1A — Straight, fine" },
+  { id: "1b", label: "1B — Straight, medium" },
+  { id: "1c", label: "1C — Straight, coarse" },
+  { id: "2a", label: "2A — Wavy, loose" },
+  { id: "2b", label: "2B — Wavy, defined" },
+  { id: "2c", label: "2C — Wavy, strong" },
+  { id: "3a", label: "3A — Curly, loose curls" },
+  { id: "3b", label: "3B — Curly, springy ringlets" },
+  { id: "3c", label: "3C — Curly, tight corkscrews" },
+  { id: "4a", label: "4A — Coily, soft coil" },
+  { id: "4b", label: "4B — Coily, tight zigzag" },
+  { id: "4c", label: "4C — Coily, tightest, least defined pattern" }
+];
+const HAIR_CONDITIONS = [
+  { id: "color-treated", label: "Color-treated" },
+  { id: "chemically-treated", label: "Chemically relaxed or permed" },
+  { id: "heat-styled", label: "Heat-styled regularly" },
+  { id: "dry-brittle", label: "Dry or brittle" },
+  { id: "oily-scalp", label: "Oily scalp" },
+  { id: "dandruff", label: "Dandruff-prone" },
+  { id: "fine-thinning", label: "Fine or thinning" }
 ];
 const HAIR_COLORS = [
   { id: "black", hex: "#0b0b0b" }, { id: "brown", hex: "#5a3a22" },
@@ -388,11 +422,19 @@ function loadProfile() {
 function saveProfile(p) { try { localStorage.setItem("iq-profile", JSON.stringify(p)); } catch (_) {} }
 
 function renderHairGrid() {
+  // NOTE: profile.hairType may still hold an old single-digit id ("1"-"4") saved before
+  // the 12-subtype grid existed. None of the current HAIR_TYPES ids match a bare digit,
+  // so it simply renders with nothing selected below -- no crash, and the stored value
+  // isn't touched (no guessed sub-type is fabricated) until the user picks a real one.
   const profile = loadProfile();
   const grid = document.getElementById("hair-type-grid");
-  grid.innerHTML = HAIR_TYPES.map((t) =>
-    '<div class="hair-opt' + (profile.hairType === t.id ? " sel" : "") + '" data-type="' + t.id + '">' + esc(t.label) + '</div>'
-  ).join("");
+  grid.innerHTML = HAIR_TYPE_GROUPS.map((g) => {
+    const opts = HAIR_TYPES.filter((t) => t.id.charAt(0) === g.id);
+    return '<h4 class="hair-group-label">' + esc(g.label) + '</h4>' +
+      '<div class="hair-grid">' + opts.map((t) =>
+        '<div class="hair-opt' + (profile.hairType === t.id ? " sel" : "") + '" data-type="' + t.id + '">' + esc(t.label) + '</div>'
+      ).join("") + '</div>';
+  }).join("");
   grid.querySelectorAll(".hair-opt").forEach((el) => {
     el.addEventListener("click", () => {
       const p = loadProfile(); p.hairType = el.dataset.type; saveProfile(p);
@@ -407,6 +449,27 @@ function renderHairGrid() {
     el.addEventListener("click", () => {
       const p = loadProfile(); p.hairColor = el.dataset.color; saveProfile(p);
       renderHairGrid();
+    });
+  });
+}
+
+function renderHairConditions() {
+  const profile = loadProfile();
+  const selected = Array.isArray(profile.conditions) ? profile.conditions : [];
+  const grid = document.getElementById("hair-conditions-grid");
+  grid.innerHTML = HAIR_CONDITIONS.map((c) =>
+    '<div class="hair-opt' + (selected.includes(c.id) ? " sel" : "") + '" data-condition="' + c.id + '">' + esc(c.label) + '</div>'
+  ).join("");
+  grid.querySelectorAll(".hair-opt").forEach((el) => {
+    el.addEventListener("click", () => {
+      const p = loadProfile();
+      const arr = Array.isArray(p.conditions) ? p.conditions.slice() : [];
+      const id = el.dataset.condition;
+      const idx = arr.indexOf(id);
+      if (idx === -1) arr.push(id); else arr.splice(idx, 1);
+      p.conditions = arr;
+      saveProfile(p);
+      renderHairConditions();
     });
   });
 }
@@ -496,6 +559,7 @@ document.getElementById("btn-search-name").addEventListener("click", () => {
   await loadRules();
   renderMethodology();
   renderHairGrid();
+  renderHairConditions();
   renderRecTabs();
   renderRecList();
 
