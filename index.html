@@ -12,6 +12,8 @@
 <link rel="apple-touch-icon" href="art/icon-512.png"/>
 <link rel="icon" href="art/icon-512.png"/>
 <link rel="manifest" href="manifest.json"/>
+<link rel="preconnect" href="https://world.openbeautyfacts.org"/>
+<link rel="dns-prefetch" href="https://world.openbeautyfacts.org"/>
 <style>
   :root {
     --ink:#26215C; --ink2:#3C3489; --bg:#F7F6F2; --card:#FFFFFF; --border:#E3E1D8;
@@ -277,8 +279,9 @@ function renderMethodology() {
 // fallback, scanning would silently not work for anyone on an iPhone -- the single most
 // likely device for "scan a product in the aisle." The fallback is ZXing, a real, widely-used
 // open-source decoder (MIT license, github.com/zxing-js/library) that reads camera frames in
-// plain JS/canvas -- no native browser API dependency, so it works in Safari. Loaded from a
-// CDN on demand, only for browsers that actually need it, so Chrome/Edge users never fetch it.
+// plain JS/canvas -- no native browser API dependency, so it works in Safari. Vendored locally
+// (vendor/zxing-0.21.3.min.js) rather than fetched from a CDN at scan time -- one less runtime
+// third-party network dependency, and it still only loads for browsers that actually need it.
 let scanStream = null;
 let zxingReader = null;
 let zxingLoadPromise = null;
@@ -287,7 +290,7 @@ function loadZXing() {
   if (zxingLoadPromise) return zxingLoadPromise;
   zxingLoadPromise = new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js";
+    s.src = "vendor/zxing-0.21.3.min.js";
     s.onload = resolve;
     s.onerror = () => reject(new Error("zxing failed to load"));
     document.head.appendChild(s);
@@ -357,6 +360,7 @@ async function startCameraScanZXing(status) {
       }
     );
   } catch (e) {
+    video.style.display = "none";
     status.textContent = "Camera access denied or unavailable. Use manual entry instead.";
   }
 }
