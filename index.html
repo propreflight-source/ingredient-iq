@@ -425,6 +425,15 @@ document.getElementById("btn-search-name").addEventListener("click", () => {
   renderHairGrid();
   renderRecTabs();
   renderRecList();
+
+  // Shareable scan results: ?barcode=<code> pre-fills and looks up on load,
+  // so a result can be linked or bookmarked, not just reached by re-scanning.
+  const params = new URLSearchParams(location.search);
+  const sharedBarcode = params.get("barcode");
+  if (sharedBarcode) {
+    document.getElementById("manual-barcode").value = sharedBarcode;
+    lookupBarcode(sharedBarcode);
+  }
 })();
 </script>
 </body>
