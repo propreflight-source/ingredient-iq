@@ -1,5 +1,5 @@
 {
-  "version": "0.1",
+  "version": "0.2",
   "methodology": "Every product starts at 100. Each matched ingredient below subtracts its listed points, once per match. Score floors at 5 (never 0 -- this is a simplified consumer heuristic, not a toxicology report, and shouldn't read as 'this will hurt you'). The full list of what matched and how many points each cost is always shown -- nothing is hidden in a black-box number. This is one transparent way of reading a label, built from well-documented, widely-cited consumer ingredient concerns (the kind you'll find on INCI/ingredient-decoder sites) -- it is not a medical, dermatological, or regulatory judgment, and it doesn't know your personal allergies or sensitivities. When in doubt about a real reaction, ask a dermatologist, not an app.",
   "ingredients": [
     {
@@ -81,6 +81,54 @@
       "severity": "low",
       "kid_explainer": "Companies don't have to tell you exactly what makes up the smell in a product -- they can just write one word, 'fragrance', to cover a whole secret recipe of scent chemicals. That makes it hard to know exactly what you're putting on your hair.",
       "why": "'Fragrance' can legally hide dozens of undisclosed chemicals, including allergens and sometimes phthalates. Not inherently dangerous, but a transparency gap that makes it harder to identify what's actually triggering a reaction if you have sensitive skin."
+    },
+    {
+      "match": ["peg-", "polyethylene glycol"],
+      "label": "PEG Compounds",
+      "points": 6,
+      "severity": "low",
+      "kid_explainer": "This is a helper ingredient that mixes oil and water together, like a whisk in salad dressing, so the product feels smooth. The way it's made can sometimes leave behind a tiny bit of another chemical (the same one mentioned with the gentler soap above), which is why some people look for products without it.",
+      "why": "A petroleum-derived emulsifier/thickener. Like Sodium Laureth Sulfate, manufacturing can leave trace 1,4-dioxane as a byproduct rather than an added ingredient; it can also increase how easily other ingredients absorb into skin. Considered low-risk by major safety panels at cosmetic-use levels, but it's a common reason people look for 'PEG-free' labels."
+    },
+    {
+      "match": ["cocamide dea"],
+      "label": "Cocamide DEA",
+      "points": 12,
+      "severity": "high",
+      "kid_explainer": "This ingredient helps make big, fluffy bubbles and makes a shampoo feel thicker. On its own it's not dangerous, but if it sits in a bottle next to certain preservative chemicals for a long time, it can slowly turn into a different substance that scientists are more worried about.",
+      "why": "A foam-boosting/thickening agent. California's Prop 65 lists it as a possible carcinogen because, when combined with certain nitrite-based preservatives over time, it can form nitrosamines -- a well-documented reason it's been phased out of many US formulations, though it isn't dangerous simply by being present."
+    },
+    {
+      "match": ["propylene glycol"],
+      "label": "Propylene Glycol",
+      "points": 3,
+      "severity": "low",
+      "kid_explainer": "This ingredient's job is to pull water into your hair and skin, like a tiny sponge, so products feel less dry. Most people's skin is totally fine with it, but a small number of people find it makes their skin a little itchy or red.",
+      "why": "A humectant/solvent that helps other ingredients dissolve and keeps products from drying out. Generally recognized as safe by major cosmetic safety panels at typical concentrations; flagged lightly here only because it's a documented contact irritant/allergen for a minority of sensitive-skin users."
+    },
+    {
+      "match": ["bht", "butylated hydroxytoluene"],
+      "label": "BHT (Butylated Hydroxytoluene)",
+      "points": 8,
+      "severity": "medium",
+      "kid_explainer": "This is a tiny bodyguard that stops the oils in a product from going stale and smelly, kind of like how you might keep crackers fresh with a little packet in the box. Scientists are still studying whether using a lot of it over many years could be linked to health problems.",
+      "why": "A synthetic antioxidant preservative that prevents oils in the formula from oxidizing/going rancid. Some animal studies have raised endocrine-disruption and carcinogenicity questions at high doses; evidence in humans at cosmetic-use levels is limited and debated, but it's a well-documented reason 'BHT-free' is a common label claim."
+    },
+    {
+      "match": ["fd&c", "d&c ", "yellow 5", "yellow 6", "red 40", "blue 1", "ci 19140", "ci 16035", "ci 42090", "ci 15985"],
+      "label": "Synthetic Coal-Tar Dyes",
+      "points": 5,
+      "severity": "low",
+      "kid_explainer": "These are the bright colors added just to make a product look pretty in the bottle -- they don't clean or help your hair at all. A few people's skin gets itchy or irritated around these kinds of dyes.",
+      "why": "Petroleum-derived synthetic colorants added purely for appearance, listed either by name (e.g. Yellow 5, Red 40) or by their Colour Index number (e.g. CI 19140). Not typically harmful for most people, but a documented, if uncommon, cause of skin/scalp irritation and allergic reactions; some are restricted in the EU."
+    },
+    {
+      "match": ["triethanolamine"],
+      "label": "Triethanolamine (TEA)",
+      "points": 6,
+      "severity": "low",
+      "kid_explainer": "This ingredient's job is mostly to balance the pH, kind of like a referee making sure a product isn't too acidic or too basic for your skin. By itself it's usually fine, but like the ingredient above, it can react with certain preservatives over time to form something scientists watch more closely.",
+      "why": "A pH-adjusting agent. Like Cocamide DEA, it belongs to the ethanolamine family and can react with nitrite-based preservatives to form nitrosamines over time; by itself at cosmetic-use levels it's considered a mild irritant at most by major safety panels, but it's a common reason people look for 'DEA/TEA-free' formulations."
     }
   ]
 }
