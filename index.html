@@ -54,9 +54,6 @@
   .hair-opt.sel { border-color:var(--ink2); background:#EEEDFE; }
   .hair-group-label { margin:0.9rem 0 0.3rem; font-size:0.85rem; font-weight:700; color:var(--ink2); }
   .hair-group-label:first-child { margin-top:0.2rem; }
-  .color-swatches { display:flex; gap:0.6rem; flex-wrap:wrap; margin-top:0.6rem; }
-  .swatch { width:40px; height:40px; border-radius:50%; border:2px solid var(--border); cursor:pointer; }
-  .swatch.sel { border-color:var(--ink2); box-shadow:0 0 0 2px var(--ink2); }
   .cat-tabs { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.8rem; }
   .cat-tabs button { border:1px solid var(--border); background:var(--card); padding:0.4rem 0.8rem; border-radius:999px; font-size:0.82rem; cursor:pointer; }
   .cat-tabs button.active { background:var(--ink); color:#fff; }
@@ -129,11 +126,6 @@
     <p class="muted">The standard 1–4 typing system used across the haircare industry. This changes what "highly rated" means for you on the Recommendations tab.</p>
     <img src="art/hair-types.svg" alt="Illustration of the four hair type categories: straight, wavy, curly, and coily" style="width:100%; max-width:700px; display:block; margin:0.6rem auto;"/>
     <div class="hair-grid" id="hair-type-grid"></div>
-  </div>
-  <div class="card">
-    <h3 style="margin-top:0;">Hair color</h3>
-    <p class="muted">Color-treated hair reacts differently to sulfates and alcohols — this tunes recommendations too.</p>
-    <div class="color-swatches" id="hair-color-grid"></div>
   </div>
   <div class="card">
     <h3 style="margin-top:0;">Hair conditions</h3>
@@ -488,11 +480,6 @@ const HAIR_CONDITIONS = [
   { id: "dandruff", label: "Dandruff-prone" },
   { id: "fine-thinning", label: "Fine or thinning" }
 ];
-const HAIR_COLORS = [
-  { id: "black", hex: "#0b0b0b" }, { id: "brown", hex: "#5a3a22" },
-  { id: "blonde", hex: "#e8c77e" }, { id: "red", hex: "#a33d1f" },
-  { id: "gray", hex: "#b8b8b8" }, { id: "dyed", hex: "#8a4fd6" }
-];
 
 // Real, commonly-documented haircare associations -- amplify = this concern matters MORE
 // for you, reduce = it matters LESS (or is actively desired, e.g. sulfates for oily scalp).
@@ -642,16 +629,6 @@ function renderHairGrid() {
       const p = loadProfile(); p.hairType = el.dataset.type; saveProfile(p);
       Object.keys(recCache).forEach((k) => delete recCache[k]);
       renderHairGrid(); renderRecList();
-    });
-  });
-  const colorGrid = document.getElementById("hair-color-grid");
-  colorGrid.innerHTML = HAIR_COLORS.map((c) =>
-    '<div class="swatch' + (profile.hairColor === c.id ? " sel" : "") + '" data-color="' + c.id + '" style="background:' + c.hex + ';" title="' + c.id + '"></div>'
-  ).join("");
-  colorGrid.querySelectorAll(".swatch").forEach((el) => {
-    el.addEventListener("click", () => {
-      const p = loadProfile(); p.hairColor = el.dataset.color; saveProfile(p);
-      renderHairGrid();
     });
   });
 }
