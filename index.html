@@ -786,6 +786,15 @@ document.getElementById("btn-search-name").addEventListener("click", () => {
     lookupBarcode(sharedBarcode);
   }
 })();
+
+// Offline app shell: caches the UI/static assets so the page still opens with
+// no signal (bad in-store wifi/cell), while product lookups above always go
+// straight to Open Beauty Facts, untouched by the service worker.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
