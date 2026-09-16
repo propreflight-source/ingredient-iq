@@ -1,0 +1,12 @@
+{
+  "name": "Gabby's",
+  "short_name": "Gabby's",
+  "description": "Scan a product, get a real breakdown of what's actually in it.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F7F6F2",
+  "theme_color": "#3C3489",
+  "icons": [
+    { "src": "art/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

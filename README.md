@@ -1,13 +1,41 @@
-# IngredientIQ
+# Gabby's
 
 A real, honest product-ingredient scanner — built as a sibling project to
 [Ultron Valley](../ultron-valley), through the same process and the same rules.
 
+## Using it on an iPhone
+
+The app itself is mobile-first now: touch-sized buttons, no iOS zoom-on-focus,
+safe-area padding for the notch, and "Add to Home Screen" support (real
+manifest + icon, opens full-screen like an app once added).
+
+**Camera scanning works in Safari** — iOS Safari has never implemented the
+`BarcodeDetector` API that Chrome/Edge have, so without a fallback, scanning
+would silently fail on every iPhone. This app now loads
+[ZXing](https://github.com/zxing-js/library) (a real, widely-used open-source
+barcode decoder, MIT licensed) on demand for browsers that need it, so camera
+scanning is real on Safari too, not just manual entry.
+
+**The one real constraint you can't route around**: iOS Safari only grants
+camera access on a *secure context* — `https://` or `localhost`. If you run
+`run-local.sh`/`.bat` on your computer and open its LAN address
+(`http://192.168.x.x:8770`) from your iPhone, the camera button will be
+denied every time — that's Apple's own security rule, not a bug here. To
+actually scan from your phone, either:
+- **Deploy it somewhere with real HTTPS** (GitHub Pages, Netlify, Vercel —
+  all free, no backend needed since everything already runs client-side), or
+- **Tunnel your local server** for testing (e.g. `cloudflared tunnel --url
+  http://localhost:8770`), which gives it a temporary `https://` address.
+
+Manual barcode entry and name search work everywhere, including plain
+`http://`, with no such limit — only the *live camera* needs HTTPS.
+
 ## What it actually does
 
 - **Scans a real barcode** using your browser's own built-in `BarcodeDetector`
-  API (Chrome/Edge) — no camera library, no download, no account. Falls back
-  to manual barcode entry or a name search when that API isn't available.
+  API (Chrome/Edge), or a real open-source decoder (ZXing) as a fallback on
+  browsers without it — no camera library download, no account. Falls back
+  to manual barcode entry or a name search when neither is available.
 - **Looks up the real product** in [Open Beauty Facts](https://world.openbeautyfacts.org),
   a free, open, crowdsourced product database (same organization as Open Food
   Facts) — verified CORS-open, no API key needed.

@@ -9,9 +9,9 @@ if %ERRORLEVEL% NEQ 0 (
     echo Python not found. Install Python 3 to run the local server.
     exit /b 1
   )
-  echo Serving IngredientIQ at http://127.0.0.1:%PORT%/
+  echo Serving Gabby's at http://127.0.0.1:%PORT%/
   py -m http.server %PORT%
 ) else (
-  echo Serving IngredientIQ at http://127.0.0.1:%PORT%/
+  echo Serving Gabby's at http://127.0.0.1:%PORT%/
   python -m http.server %PORT%
 )

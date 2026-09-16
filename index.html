@@ -2,30 +2,40 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>IngredientIQ — scan it, understand it</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Gabby's — scan it, understand it</title>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Gabby's"/>
+<meta name="theme-color" content="#3C3489"/>
+<link rel="apple-touch-icon" href="art/icon-512.png"/>
+<link rel="icon" href="art/icon-512.png"/>
+<link rel="manifest" href="manifest.json"/>
 <style>
   :root {
     --ink:#26215C; --ink2:#3C3489; --bg:#F7F6F2; --card:#FFFFFF; --border:#E3E1D8;
     --muted:#5F5E5A; --good:#0F6E56; --mid:#854F0B; --bad:#791F1F;
     --good-bg:#E1F5EE; --mid-bg:#FAEEDA; --bad-bg:#FAECE7;
   }
-  * { box-sizing:border-box; }
-  body { margin:0; font-family:-apple-system,Segoe UI,Arial,sans-serif; background:var(--bg); color:var(--ink); }
-  header { padding:1.4rem 1.2rem 1rem; text-align:center; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; font-family:-apple-system,Segoe UI,Arial,sans-serif; background:var(--bg); color:var(--ink);
+    padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); padding-bottom:env(safe-area-inset-bottom); }
+  header { padding:calc(1.4rem + env(safe-area-inset-top)) 1.2rem 1rem; text-align:center; }
   header h1 { margin:0 0 0.2rem; font-size:1.6rem; }
   header p { margin:0; color:var(--muted); font-size:0.9rem; }
-  nav { display:flex; justify-content:center; gap:0.6rem; flex-wrap:wrap; padding:0 1rem 1rem; }
-  nav button { border:1px solid var(--border); background:var(--card); color:var(--ink); padding:0.5rem 1rem; border-radius:999px; font-size:0.85rem; cursor:pointer; font-weight:600; }
+  nav { display:flex; justify-content:center; gap:0.6rem; flex-wrap:wrap; padding:0.6rem 1rem; position:sticky; top:0; background:var(--bg); z-index:10; }
+  nav button { border:1px solid var(--border); background:var(--card); color:var(--ink); padding:0.6rem 1.1rem; border-radius:999px; font-size:0.9rem; cursor:pointer; font-weight:600; min-height:44px; touch-action:manipulation; }
   nav button.active { background:var(--ink2); color:#fff; border-color:var(--ink2); }
   main { max-width:920px; margin:0 auto; padding:0 1rem 3rem; }
   section { display:none; }
   section.active { display:block; }
   .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.2rem; margin-bottom:1rem; }
   .row { display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center; }
-  input[type=text], input[type=search] { flex:1; min-width:200px; padding:0.65rem 0.8rem; border:1px solid var(--border); border-radius:8px; font-size:0.95rem; }
-  button.primary { background:var(--ink2); color:#fff; border:none; padding:0.65rem 1.1rem; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.95rem; }
-  button.ghost { background:transparent; border:1px solid var(--border); padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-weight:600; }
+  input[type=text], input[type=search] { flex:1; min-width:200px; padding:0.75rem 0.8rem; border:1px solid var(--border); border-radius:8px; font-size:16px; min-height:44px; }
+  button.primary { background:var(--ink2); color:#fff; border:none; padding:0.75rem 1.2rem; border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem; min-height:44px; touch-action:manipulation; }
+  button.ghost { background:transparent; border:1px solid var(--border); padding:0.7rem 1.1rem; border-radius:8px; cursor:pointer; font-weight:600; min-height:44px; touch-action:manipulation; }
   .muted { color:var(--muted); font-size:0.85rem; }
   .score-wrap { display:flex; align-items:center; gap:1.2rem; flex-wrap:wrap; }
   .score-circle { width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.7rem; font-weight:800; flex-shrink:0; border:6px solid; }
@@ -52,12 +62,16 @@
   .prod-card .brand { color:var(--muted); font-size:0.8rem; }
   .prod-score { display:inline-block; padding:0.15rem 0.5rem; border-radius:999px; font-weight:800; font-size:0.85rem; margin-top:0.4rem; }
   .note-box { background:#EEEDFE; border-radius:10px; padding:0.8rem 1rem; font-size:0.85rem; color:var(--ink2); margin-bottom:1rem; }
+  @media (max-width:480px) {
+    .row input[type=text], .row input[type=search] { flex-basis:100%; min-width:0; }
+    .row button.ghost { flex-basis:100%; }
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🧴 IngredientIQ</h1>
+  <h1>🧴 Gabby's</h1>
   <p>Scan a product, get a real breakdown of what's actually in it — explained simply, nothing hidden.</p>
 </header>
 
@@ -257,16 +271,46 @@ function renderMethodology() {
   root.innerHTML = html;
 }
 
-// --- Camera barcode scanning: uses the browser's OWN native BarcodeDetector API when present
-// (built into Chrome/Edge, no library, no download). No fake/simulated scanning -- if the
-// browser doesn't support it, we say so plainly and point at manual entry instead. ---
+// --- Camera barcode scanning ---
+// Chrome/Edge/Android get the browser's OWN native BarcodeDetector API: no library, no
+// download. Safari (iPhone/iPad/Mac) has never implemented BarcodeDetector, so without a
+// fallback, scanning would silently not work for anyone on an iPhone -- the single most
+// likely device for "scan a product in the aisle." The fallback is ZXing, a real, widely-used
+// open-source decoder (MIT license, github.com/zxing-js/library) that reads camera frames in
+// plain JS/canvas -- no native browser API dependency, so it works in Safari. Loaded from a
+// CDN on demand, only for browsers that actually need it, so Chrome/Edge users never fetch it.
 let scanStream = null;
+let zxingReader = null;
+let zxingLoadPromise = null;
+function loadZXing() {
+  if (window.ZXing) return Promise.resolve();
+  if (zxingLoadPromise) return zxingLoadPromise;
+  zxingLoadPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js";
+    s.onload = resolve;
+    s.onerror = () => reject(new Error("zxing failed to load"));
+    document.head.appendChild(s);
+  });
+  return zxingLoadPromise;
+}
 async function startCameraScan() {
   const status = document.getElementById("scan-status");
-  if (!("BarcodeDetector" in window)) {
-    status.textContent = "Your browser doesn't support live barcode scanning (BarcodeDetector API). Use manual entry below instead.";
+  if (!("mediaDevices" in navigator) || !navigator.mediaDevices.getUserMedia) {
+    status.textContent = "This browser doesn't support camera access. Use manual entry below instead.";
     return;
   }
+  if ("BarcodeDetector" in window) return startCameraScanNative(status);
+  status.textContent = "Loading scanner…";
+  try {
+    await loadZXing();
+  } catch (e) {
+    status.textContent = "Couldn't load the barcode scanner (check your internet connection). Use manual entry instead.";
+    return;
+  }
+  return startCameraScanZXing(status);
+}
+async function startCameraScanNative(status) {
   try {
     scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
   } catch (e) {
@@ -294,8 +338,31 @@ async function startCameraScan() {
   };
   loop();
 }
+async function startCameraScanZXing(status) {
+  const video = document.getElementById("scan-video");
+  video.style.display = "block";
+  zxingReader = new ZXing.BrowserMultiFormatReader();
+  status.textContent = "Point the camera at a barcode…";
+  try {
+    await zxingReader.decodeFromConstraints(
+      { video: { facingMode: "environment" } },
+      video,
+      (result) => {
+        if (result) {
+          const code = result.getText();
+          stopCameraScan();
+          document.getElementById("manual-barcode").value = code;
+          lookupBarcode(code);
+        }
+      }
+    );
+  } catch (e) {
+    status.textContent = "Camera access denied or unavailable. Use manual entry instead.";
+  }
+}
 function stopCameraScan() {
   if (scanStream) { scanStream.getTracks().forEach((t) => t.stop()); scanStream = null; }
+  if (zxingReader) { try { zxingReader.reset(); } catch (_) {} zxingReader = null; }
   document.getElementById("scan-video").style.display = "none";
 }
 
@@ -419,7 +486,9 @@ document.getElementById("btn-search-name").addEventListener("click", () => {
 
 (async function init() {
   document.getElementById("camera-support-note").textContent =
-    ("BarcodeDetector" in window) ? "(uses your browser's built-in scanner)" : "(this browser has no built-in scanner — use manual entry)";
+    ("mediaDevices" in navigator && navigator.mediaDevices.getUserMedia)
+      ? (("BarcodeDetector" in window) ? "(uses your browser's built-in scanner)" : "(uses an in-browser scanner — works on iPhone/Safari too)")
+      : "(this browser has no camera access — use manual entry)";
   await loadRules();
   renderMethodology();
   renderHairGrid();
