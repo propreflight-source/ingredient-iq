@@ -1,17 +1,36 @@
 # Gabby's — context brief for a fresh AI session
 
-This file exists so you can paste it into a different chat (a new Claude/ChatGPT/etc.
-conversation with no memory of this project) and have it understand the whole app well
-enough to suggest or make real improvements — without needing repo access.
+This file exists so you can paste it into a different chat (Grok, ChatGPT, a fresh
+Claude conversation — anything with no memory of this project) and have it understand
+the whole app well enough to propose real improvements, without needing repo access.
+
+**Your role if you're reading this in Grok (or any AI chat) is to propose, not apply.**
+You don't have write access to this repo. The actual workflow: you read this brief,
+suggest concrete diffs/patches/ideas against the real source below, and Mason brings
+your suggestions back to a Claude Code session, which hands the actual implementation to
+a dedicated builder agent (`gabbys-builder`, scoped to this repo), verifies it live in a
+browser at the real iPhone 14 viewport, and pushes it to the live deployment. So: be
+concrete and specific (exact functions, exact new JSON entries, exact CSS), not vague
+directional advice — the more directly actionable your suggestion, the less back-and-forth
+it takes to actually ship it.
 
 ## What it is
 
 A real, honest product-ingredient scanner for haircare — the same idea as Yuka or Think
 Dirty, but for hair products instead of food/skincare. Single-file client-side web app,
-no build step, no framework, no backend. Built as a sibling project to a separate game
-called Ultron Valley, sharing the same core rule: **never fabricate data**. If a real
-number/claim isn't available, the app says so plainly instead of inventing something
-plausible-looking.
+no build step, no framework, no backend. Built as a sibling project to a separate app
+called Jarvis (formerly Ultron Valley), sharing the same core rule: **never fabricate
+data**. If a real number/claim isn't available, the app says so plainly instead of
+inventing something plausible-looking.
+
+## Where it actually lives right now
+
+- **Live deployment (real HTTPS, works with the laptop off)**: https://propreflight-source.github.io/ingredient-iq/
+  — GitHub Pages, deploying automatically from the `main` branch on every push.
+- **Repo**: https://github.com/propreflight-source/ingredient-iq
+- **Local dev**: http://127.0.0.1:8770/ (`run-local.sh`/`run-local.bat`) — for iterating before
+  pushing; must be real HTTP, not `file://`, or the `fetch()` calls to Open Beauty Facts
+  break under a `null` origin.
 
 ## What it actually does (all real, verified working)
 
@@ -24,9 +43,9 @@ plausible-looking.
   (same organization as Open Food Facts) — free, open, crowdsourced, CORS-open, no API
   key needed.
 - **Scores it 0–100 with a fully transparent, published rule list** (`data/ingredient-
-  rules.json`, embedded in full below) — every point lost is shown with the exact
-  ingredient, a plain-language "why," and a version explained simply enough for a
-  five-year-old. Never a black-box number.
+  rules.json`, currently 16 rules / version 0.2, embedded in full below) — every point
+  lost is shown with the exact ingredient, a plain-language "why," and a version
+  explained simply enough for a five-year-old. Never a black-box number.
 - **Hair type (standard 1–4 system) + color profile**, stored in `localStorage`, with an
   original hand-authored SVG illustration (not traced from any photo).
 - **Category-browsable recommendations** — real products fetched live from Open Beauty
@@ -36,36 +55,39 @@ plausible-looking.
 - **Mobile-first, verified at the exact iPhone 14 viewport (390×844)**: 44px touch
   targets, 16px inputs (prevents iOS zoom-on-focus), safe-area-inset padding for the
   notch, sticky nav, Add-to-Home-Screen support (real `manifest.json` + icon + Apple meta
-  tags — opens full-screen like a native app once added).
+  tags — opens full-screen like a native app once added). Every UI suggestion needs to
+  hold up here — this is a hard constraint, not a nice-to-have.
 
 ## The one real, unavoidable constraint
 
-iOS Safari only grants camera access (`getUserMedia`) on a *secure context* — `https://`
-or `localhost`. Running the local static server and opening its LAN IP from a phone
-(`http://192.168.x.x:8770`) will **always** deny camera permission — that's Apple's own
-OS-level rule, not a bug in this app. Manual barcode entry and name search work fine over
-plain HTTP regardless. To get live camera scanning on a real phone: deploy with real
-HTTPS (GitHub Pages / Netlify / Vercel — free, static-only, no backend needed since
-everything already runs client-side) or use a temporary tunnel (e.g. `cloudflared
-tunnel --url http://localhost:8770`) for testing.
+iOS Safari only grants camera access (`getUserMedia`) on a *secure context* —
+`https://` or `localhost`. That's exactly why the live GitHub Pages URL above exists;
+don't suggest reverting to a plain-HTTP-only deployment story.
 
 ## Guardrails to preserve (please don't undo these)
 
 - **No fabrication, ever.** No invented scores, reviews, "verified safe" claims, or
   proprietary black-box scoring. The whole point of the app is that the methodology is
-  always visible.
+  always visible. If you propose a new ingredient rule, it needs to be a real,
+  well-documented consumer ingredient concern (the kind you'd find on INCI/ingredient-
+  decoder sites) — hedge appropriately ("some studies suggest," "evidence is debated")
+  rather than stating something as settled fact if it isn't. Don't invent a citation,
+  a specific study, or a specific ban you're not certain is real.
 - Don't quietly add a paid/proprietary layer over the transparent rule list.
 - Keep the "what this app does not do" honesty (not a medical/dermatological judgment,
   not a lab test, doesn't know personal allergies) visible, not buried.
 - No build step / framework has been introduced by design — it's intentionally a single
   static site. If you think a build step is genuinely warranted, say so explicitly rather
   than just introducing one.
+- If you propose a new external dependency, name it explicitly and note its license —
+  this project vendors dependencies locally rather than pulling from a CDN at runtime
+  (see the ZXing note above).
 
 ## Genuinely open ideas for improvement (not a prescriptive to-do list)
 
 - Offline support (service worker) for spotty in-store wifi/cell signal.
-- Expand `data/ingredient-rules.json` past its current 10 rules (v0.1) — more coverage,
-  more nuance.
+- Keep expanding `data/ingredient-rules.json` — 16 rules now, still real coverage gaps
+  (e.g. more dye/preservative families, more surfactants).
 - Wire the hair type/color profile into the *scoring* itself (right now it only affects
   what "Recommendations" fetches, not point weighting) — if you do this, keep it
   transparent (show which rule fired *because of* the profile, don't hide it).
@@ -75,7 +97,7 @@ tunnel --url http://localhost:8770`) for testing.
 - Accessibility pass — no ARIA audit has been done yet.
 - Side-by-side product comparison mode.
 - Automated tests — currently everything has been verified manually via browser
-  screenshots each session; there's no regression test suite.
+  checks each session; there's no regression test suite.
 
 ## Files (this is the entire app)
 
@@ -88,11 +110,14 @@ tunnel --url http://localhost:8770`) for testing.
   manifest (deliberately one real asset, not multiple mislabeled sizes).
 - `vendor/zxing-0.21.3.min.js` — vendored barcode decoder, don't hand-edit, replace by
   re-downloading the same pinned version if it ever needs updating.
-- `run-local.sh` / `run-local.bat` — serve on port 8770. Must be real HTTP, not
-  `file://`, or the `fetch()` calls to Open Beauty Facts break under a `null` origin.
+- `run-local.sh` / `run-local.bat` — serve locally on port 8770.
 - `README.md` — user-facing docs, includes the "what it does / does not do" honesty list.
-- `CLAUDE.md` — a standing rule for AI assistants working on this repo: always end a
-  response touching this app with a verified-live link to it.
+- `CLAUDE.md` — standing rules for AI assistants working on this repo directly: always
+  end a response touching this app with a verified-live link, and hand off every actual
+  file edit to the `gabbys-builder` subagent rather than editing ad hoc.
+- `.claude/agents/gabbys-builder.md` — the subagent that does the actual implementation
+  work once a change is decided; retries on its own before escalating, only touches this
+  repo, never fabricates data, verifies every change live.
 
 ---
 
@@ -612,6 +637,7 @@ document.getElementById("btn-search-name").addEventListener("click", () => {
 </script>
 </body>
 </html>
+
 ```
 
 ---
@@ -620,7 +646,7 @@ document.getElementById("btn-search-name").addEventListener("click", () => {
 
 ```json
 {
-  "version": "0.1",
+  "version": "0.2",
   "methodology": "Every product starts at 100. Each matched ingredient below subtracts its listed points, once per match. Score floors at 5 (never 0 -- this is a simplified consumer heuristic, not a toxicology report, and shouldn't read as 'this will hurt you'). The full list of what matched and how many points each cost is always shown -- nothing is hidden in a black-box number. This is one transparent way of reading a label, built from well-documented, widely-cited consumer ingredient concerns (the kind you'll find on INCI/ingredient-decoder sites) -- it is not a medical, dermatological, or regulatory judgment, and it doesn't know your personal allergies or sensitivities. When in doubt about a real reaction, ask a dermatologist, not an app.",
   "ingredients": [
     {
@@ -702,9 +728,58 @@ document.getElementById("btn-search-name").addEventListener("click", () => {
       "severity": "low",
       "kid_explainer": "Companies don't have to tell you exactly what makes up the smell in a product -- they can just write one word, 'fragrance', to cover a whole secret recipe of scent chemicals. That makes it hard to know exactly what you're putting on your hair.",
       "why": "'Fragrance' can legally hide dozens of undisclosed chemicals, including allergens and sometimes phthalates. Not inherently dangerous, but a transparency gap that makes it harder to identify what's actually triggering a reaction if you have sensitive skin."
+    },
+    {
+      "match": ["peg-", "polyethylene glycol"],
+      "label": "PEG Compounds",
+      "points": 6,
+      "severity": "low",
+      "kid_explainer": "This is a helper ingredient that mixes oil and water together, like a whisk in salad dressing, so the product feels smooth. The way it's made can sometimes leave behind a tiny bit of another chemical (the same one mentioned with the gentler soap above), which is why some people look for products without it.",
+      "why": "A petroleum-derived emulsifier/thickener. Like Sodium Laureth Sulfate, manufacturing can leave trace 1,4-dioxane as a byproduct rather than an added ingredient; it can also increase how easily other ingredients absorb into skin. Considered low-risk by major safety panels at cosmetic-use levels, but it's a common reason people look for 'PEG-free' labels."
+    },
+    {
+      "match": ["cocamide dea"],
+      "label": "Cocamide DEA",
+      "points": 12,
+      "severity": "high",
+      "kid_explainer": "This ingredient helps make big, fluffy bubbles and makes a shampoo feel thicker. On its own it's not dangerous, but if it sits in a bottle next to certain preservative chemicals for a long time, it can slowly turn into a different substance that scientists are more worried about.",
+      "why": "A foam-boosting/thickening agent. California's Prop 65 lists it as a possible carcinogen because, when combined with certain nitrite-based preservatives over time, it can form nitrosamines -- a well-documented reason it's been phased out of many US formulations, though it isn't dangerous simply by being present."
+    },
+    {
+      "match": ["propylene glycol"],
+      "label": "Propylene Glycol",
+      "points": 3,
+      "severity": "low",
+      "kid_explainer": "This ingredient's job is to pull water into your hair and skin, like a tiny sponge, so products feel less dry. Most people's skin is totally fine with it, but a small number of people find it makes their skin a little itchy or red.",
+      "why": "A humectant/solvent that helps other ingredients dissolve and keeps products from drying out. Generally recognized as safe by major cosmetic safety panels at typical concentrations; flagged lightly here only because it's a documented contact irritant/allergen for a minority of sensitive-skin users."
+    },
+    {
+      "match": ["bht", "butylated hydroxytoluene"],
+      "label": "BHT (Butylated Hydroxytoluene)",
+      "points": 8,
+      "severity": "medium",
+      "kid_explainer": "This is a tiny bodyguard that stops the oils in a product from going stale and smelly, kind of like how you might keep crackers fresh with a little packet in the box. Scientists are still studying whether using a lot of it over many years could be linked to health problems.",
+      "why": "A synthetic antioxidant preservative that prevents oils in the formula from oxidizing/going rancid. Some animal studies have raised endocrine-disruption and carcinogenicity questions at high doses; evidence in humans at cosmetic-use levels is limited and debated, but it's a well-documented reason 'BHT-free' is a common label claim."
+    },
+    {
+      "match": ["fd&c", "d&c ", "yellow 5", "yellow 6", "red 40", "blue 1", "ci 19140", "ci 16035", "ci 42090", "ci 15985"],
+      "label": "Synthetic Coal-Tar Dyes",
+      "points": 5,
+      "severity": "low",
+      "kid_explainer": "These are the bright colors added just to make a product look pretty in the bottle -- they don't clean or help your hair at all. A few people's skin gets itchy or irritated around these kinds of dyes.",
+      "why": "Petroleum-derived synthetic colorants added purely for appearance, listed either by name (e.g. Yellow 5, Red 40) or by their Colour Index number (e.g. CI 19140). Not typically harmful for most people, but a documented, if uncommon, cause of skin/scalp irritation and allergic reactions; some are restricted in the EU."
+    },
+    {
+      "match": ["triethanolamine"],
+      "label": "Triethanolamine (TEA)",
+      "points": 6,
+      "severity": "low",
+      "kid_explainer": "This ingredient's job is mostly to balance the pH, kind of like a referee making sure a product isn't too acidic or too basic for your skin. By itself it's usually fine, but like the ingredient above, it can react with certain preservatives over time to form something scientists watch more closely.",
+      "why": "A pH-adjusting agent. Like Cocamide DEA, it belongs to the ethanolamine family and can react with nitrite-based preservatives to form nitrosamines over time; by itself at cosmetic-use levels it's considered a mild irritant at most by major safety panels, but it's a common reason people look for 'DEA/TEA-free' formulations."
     }
   ]
 }
+
 ```
 
 ---
@@ -724,6 +799,7 @@ document.getElementById("btn-search-name").addEventListener("click", () => {
     { "src": "art/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
+
 ```
 
 ---
@@ -735,7 +811,9 @@ Feel free to suggest concrete diffs/patches against the source above. Please:
    inventing data (fake reviews, fake lab results, a made-up "safety certified" badge),
    don't.
 2. Note clearly which parts of your suggestion are real/verifiable vs. genuinely new
-   product decisions Mason (the project owner) needs to make.
-3. If you propose a new external dependency, name it explicitly and note its license —
-   this project has a habit of vendoring dependencies locally rather than pulling from a
-   CDN at runtime (see the ZXing note above).
+   product decisions Mason needs to make.
+3. If you propose a new external dependency, name it explicitly and note its license.
+4. Remember you're proposing, not applying — Mason brings your suggestion back to a
+   Claude Code session for actual implementation, live verification (including the
+   iPhone 14 viewport check), and deployment. Being specific and diff-shaped saves a
+   round of back-and-forth; being vague costs one.
