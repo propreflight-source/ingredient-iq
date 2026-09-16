@@ -198,11 +198,52 @@ function scoreColor(score) {
 
 function esc(s) { return String(s || "").replace(/[<>&]/g, (c) => ({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])); }
 
-function renderResult(product, ingredientsText) {
+// Small clipboard helper: modern async API first, falling back to the old
+// execCommand trick for browsers/contexts where navigator.clipboard isn't available.
+function copyText(text) {
+  const value = String(text || "");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(value).catch(() => fallbackCopyText(value));
+  } else {
+    fallbackCopyText(value);
+  }
+}
+function fallbackCopyText(value) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = value;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  } catch (_) {}
+}
+
+function renderResult(product, ingredientsText, barcode) {
   const card = document.getElementById("result-card");
   card.style.display = "block";
   if (!product && !ingredientsText) {
-    card.innerHTML = '<p class="muted">Product not found in Open Beauty Facts. Try a different barcode, or search by name.</p>';
+    if (barcode) {
+      card.innerHTML =
+        '<p class="muted">Product not found in Open Beauty Facts. Try a different barcode, or search by name.</p>' +
+        '<div class="note-box" style="margin-top:0.8rem;">' +
+          '<b>Help the next person find it:</b> this barcode isn\'t in Open Beauty Facts\' database yet. ' +
+          'You can add it yourself on Open Beauty Facts\' own site (this link takes you there, not Gabby\'s) — ' +
+          'their form doesn\'t pre-fill the barcode, so copy it below and paste it in once you\'re on their page.' +
+          '<div class="row" style="margin-top:0.6rem;flex-wrap:wrap;">' +
+            '<code style="font-family:monospace;background:#fff;border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.7rem;font-size:0.95rem;">' + esc(barcode) + '</code>' +
+            '<button class="ghost" id="btn-copy-barcode" type="button">Copy barcode</button>' +
+          '</div>' +
+          '<div style="margin-top:0.7rem;"><a href="https://world.openbeautyfacts.org/cgi/product.pl?type=search_or_add&action=display" target="_blank" rel="noopener">Help add this product to Open Beauty Facts →</a></div>' +
+        '</div>';
+      const copyBtn = document.getElementById("btn-copy-barcode");
+      if (copyBtn) copyBtn.addEventListener("click", () => copyText(barcode));
+    } else {
+      card.innerHTML = '<p class="muted">No match found by name in Open Beauty Facts. Name search is fuzzier than a barcode lookup and can miss even when the product IS in the database — try scanning or typing the actual barcode instead.</p>';
+    }
     return;
   }
   const { score, hits } = scoreIngredients(ingredientsText, loadProfile());
@@ -251,7 +292,7 @@ async function lookupBarcode(code) {
     const data = await res.json();
     if (data.status !== 1 || !data.product) {
       status.textContent = "Not found in Open Beauty Facts.";
-      renderResult(null, null);
+      renderResult(null, null, code);
       return;
     }
     status.textContent = "Found it.";
