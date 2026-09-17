@@ -68,6 +68,12 @@ Manual barcode entry and name search work everywhere, including plain
 Needs to be served over real HTTP (not opened as a `file://` path) so the
 Open Beauty Facts `fetch()` calls work under the page's own origin.
 
+## Running the tests
+
+Open `tests.html` in a browser served over http(s), same as the app itself — it loads the
+real functions straight out of `index.html` (no logic duplicated) and runs a battery of
+assertions against them, rendering pass/fail results on the page.
+
 ## Why this exists
 
 Built in response to a request for an app "like Yuka, but for hair" —

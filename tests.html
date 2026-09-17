@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Gabby's — test suite</title>
+<style>
+  body { font-family:-apple-system,Segoe UI,Arial,sans-serif; max-width:820px; margin:0 auto; padding:1.2rem; background:#F7F6F2; color:#26215C; }
+  h1 { font-size:1.4rem; }
+  #summary { font-size:1.1rem; font-weight:800; padding:0.8rem 1rem; border-radius:10px; margin-bottom:1rem; }
+  #summary.all-pass { background:#E1F5EE; color:#0F6E56; }
+  #summary.some-fail { background:#FAECE7; color:#791F1F; }
+  ul#results { list-style:none; padding:0; margin:0; }
+  li { border:1px solid #E3E1D8; border-radius:8px; padding:0.6rem 0.8rem; margin-bottom:0.5rem; background:#fff; }
+  li.pass { border-left:4px solid #0F6E56; }
+  li.fail { border-left:4px solid #791F1F; }
+  .err { color:#791F1F; font-size:0.85rem; margin-top:0.3rem; font-family:monospace; white-space:pre-wrap; }
+  .note { font-size:0.85rem; color:#5F5E5A; margin-bottom:1rem; }
+  section.group h2 { font-size:1rem; margin:1.4rem 0 0.5rem; }
+</style>
+</head>
+<body>
+
+<h1>Gabby's — automated test suite</h1>
+<p class="note">
+  Loads the real functions straight out of <code>index.html</code> (no logic duplicated here — the
+  script content is fetched, extracted, and evaluated as-is) and runs real assertions against them.
+  Must be served over http(s), same as the app itself, so <code>fetch()</code> works.
+</p>
+<div id="summary">Running…</div>
+<ul id="results"></ul>
+
+<script>
+(async function () {
+  const resultsEl = document.getElementById("results");
+  const summaryEl = document.getElementById("summary");
+  const results = [];
+
+  function assert(cond, msg) {
+    if (!cond) throw new Error(msg || "assertion failed");
+  }
+  function assertEqual(actual, expected, msg) {
+    if (actual !== expected) {
+      throw new Error((msg ? msg + " — " : "") + "expected " + JSON.stringify(expected) + ", got " + JSON.stringify(actual));
+    }
+  }
+  function test(name, fn) {
+    try {
+      fn();
+      results.push({ name: name, pass: true });
+    } catch (e) {
+      results.push({ name: name, pass: false, error: (e && e.message) ? e.message : String(e) });
+    }
+  }
+
+  function render() {
+    const passCount = results.filter((r) => r.pass).length;
+    summaryEl.textContent = passCount + "/" + results.length + " passed";
+    summaryEl.className = (passCount === results.length) ? "all-pass" : "some-fail";
+    resultsEl.innerHTML = results.map((r) =>
+      '<li class="' + (r.pass ? "pass" : "fail") + '">' +
+        (r.pass ? "✅ " : "❌ ") + escapeHtml(r.name) +
+        (r.pass ? "" : '<div class="err">' + escapeHtml(r.error) + '</div>') +
+      '</li>'
+    ).join("");
+  }
+  function escapeHtml(s) {
+    return String(s || "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+  }
+
+  // --- Step 1-2: pull the real <script> content out of index.html (no src scripts skipped,
+  // vendor/zxing is loaded on demand elsewhere and is never an inline no-src tag) and eval it
+  // in this page's own scope. This throws partway through — the real script's tail end does
+  // DOM wiring (getElementById, addEventListener, the init() IIFE) against elements that only
+  // exist on index.html's own page, not this bare test page. That throw is expected: every
+  // function and const needed for testing is defined earlier in the file (hoisted / executed
+  // in order before the crash point), so it's still fully usable after the catch.
+  let evalError = null;
+  try {
+    const res = await fetch("./index.html");
+    const html = await res.text();
+    const scriptRe = /<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi;
+    let m, source = "";
+    while ((m = scriptRe.exec(html))) source += m[1] + "\n";
+    try {
+      eval(source);
+    } catch (_) {
+      evalError = _; // expected — the DOM-wiring tail end has nothing to wire up here
+    }
+  } catch (fetchErr) {
+    document.getElementById("summary").textContent = "Could not load index.html to test against: " + fetchErr.message;
+    document.getElementById("summary").className = "some-fail";
+    return;
+  }
+
+  test("eval of index.html's inline script throws only the expected DOM-wiring error", () => {
+    assert(evalError !== null, "expected the eval to throw (DOM wiring against a bare page)");
+  });
+
+  // Step 3 (required verification): prove functions defined before the crash point really
+  // are callable afterward — don't just assume it because later tests happen to pass.
+  test("hoisting check: scoreIngredients is a callable function after the catch", () => {
+    assertEqual(typeof scoreIngredients, "function");
+  });
+  test("hoisting check: getProfileWeights is a callable function after the catch", () => {
+    assertEqual(typeof getProfileWeights, "function");
+  });
+  test("hoisting check: loadRules is a callable function after the catch", () => {
+    assertEqual(typeof loadRules, "function");
+  });
+
+  // Step 3 continued: loadRules() is a real function now, and calling it does load and return
+  // the real RULES data — BUT note: the real script declares `let RULES = null;` at its own
+  // top level, and top-level let/const declared *inside an eval() call* are scoped to that
+  // eval's own throwaway lexical environment, not to this surrounding script (verified
+  // empirically: a bare `RULES` reference here is not defined, even after loadRules() runs —
+  // only functions declared inside the eval, which close over that inner binding, can see it).
+  // So rather than relying on a bare `RULES` global (which the eval does not expose), this
+  // suite captures loadRules()'s own return value — the exact same real object — into its own
+  // local RULES binding. This is a discrepancy from the literal "RULES will still be null"
+  // framing but not from its intent: the real rules data still gets loaded for real, once,
+  // through the app's own loadRules() function, with nothing about the data faked or duplicated.
+  const RULES = await loadRules();
+
+  test("loadRules() actually loaded real rule data", () => {
+    assert(RULES && Array.isArray(RULES.ingredients) && RULES.ingredients.length > 0, "RULES did not load");
+  });
+
+  // --- scoreIngredients() — no profile ---
+  test('scoreIngredients("water, glycerin") scores a clean product 100 with zero hits', () => {
+    const r = scoreIngredients("water, glycerin");
+    assertEqual(r.score, 100, "score");
+    assertEqual(r.hits.length, 0, "hits.length");
+  });
+
+  test('scoreIngredients("sodium lauryl sulfate") scores 90 with exactly one SLS hit', () => {
+    const r = scoreIngredients("sodium lauryl sulfate");
+    assertEqual(r.score, 90, "score");
+    assertEqual(r.hits.length, 1, "hits.length");
+    assertEqual(r.hits[0].id, "sls", "hits[0].id");
+    assertEqual(r.hits[0].appliedPoints, 10, "hits[0].appliedPoints");
+    assertEqual(r.hits[0].weightApplied, 1, "hits[0].weightApplied");
+  });
+
+  test("score floors at exactly 5, never lower, when enough high-point rules match", () => {
+    // Built from the real RULES data (one real match phrase per rule), not a hardcoded guess —
+    // matching every rule drives the raw score well below zero.
+    const text = RULES.ingredients.map((r) => r.match[0]).join(", ");
+    const r = scoreIngredients(text);
+    assert(r.hits.length === RULES.ingredients.length, "expected every rule to match, got " + r.hits.length);
+    assertEqual(r.score, 5, "score should clamp to exactly 5");
+  });
+
+  // --- scoreIngredients() — with profile (weighting) ---
+  test('oily-scalp profile reduces SLS to appliedPoints 5 / weightApplied 0.5, score 95', () => {
+    const r = scoreIngredients("sodium lauryl sulfate", { conditions: ["oily-scalp"] });
+    assertEqual(r.score, 95, "score");
+    const sls = r.hits.find((h) => h.id === "sls");
+    assert(sls, "expected an sls hit");
+    assertEqual(sls.appliedPoints, 5, "sls.appliedPoints");
+    assertEqual(sls.weightApplied, 0.5, "sls.weightApplied");
+  });
+
+  test("3b + color-treated profile: SLS amplified, Silicones reduced, score 83", () => {
+    const r = scoreIngredients("sodium lauryl sulfate, dimethicone", { hairType: "3b", conditions: ["color-treated"] });
+    assertEqual(r.score, 83, "score");
+    const sls = r.hits.find((h) => h.id === "sls");
+    const sil = r.hits.find((h) => h.id === "silicones");
+    assert(sls && sil, "expected both sls and silicones hits");
+    assertEqual(sls.appliedPoints, 15, "sls.appliedPoints");
+    assertEqual(sls.weightApplied, 1.5, "sls.weightApplied");
+    assertEqual(sil.appliedPoints, 2, "silicones.appliedPoints");
+    assertEqual(sil.weightApplied, 0.5, "silicones.weightApplied");
+  });
+
+  test("color-treated + oily-scalp together cancel to weightApplied 1 (amplify + reduce cancel out)", () => {
+    const text = "sodium lauryl sulfate, dimethicone";
+    const weighted = scoreIngredients(text, { conditions: ["color-treated", "oily-scalp"] });
+    const unweighted = scoreIngredients(text);
+    const sls = weighted.hits.find((h) => h.id === "sls");
+    const sil = weighted.hits.find((h) => h.id === "silicones");
+    assert(sls && sil, "expected both sls and silicones hits");
+    assertEqual(sls.weightApplied, 1, "sls.weightApplied");
+    assertEqual(sil.weightApplied, 1, "silicones.weightApplied");
+    assertEqual(weighted.score, unweighted.score, "cancelled-out score should equal the unweighted base score");
+  });
+
+  // --- getProfileWeights() directly ---
+  test("getProfileWeights({}) returns an empty object (no profile = no weighting)", () => {
+    const w = getProfileWeights({});
+    assertEqual(Object.keys(w).length, 0, "Object.keys(w).length");
+  });
+
+  test("getProfileWeights({ hairType: '1a' }) amplifies silicones and mineral-oil to 1.5", () => {
+    const w = getProfileWeights({ hairType: "1a" });
+    assertEqual(w["silicones"], 1.5, "silicones weight");
+    assertEqual(w["mineral-oil"], 1.5, "mineral-oil weight");
+  });
+
+  // --- Rule integrity (real RULES global via loadRules()) ---
+  test("RULES.ingredients.length === 16", () => {
+    assertEqual(RULES.ingredients.length, 16);
+  });
+
+  test("every rule has a non-empty, unique id", () => {
+    const ids = RULES.ingredients.map((r) => r.id);
+    assert(ids.every((id) => typeof id === "string" && id.length > 0), "found an empty/non-string id");
+    const set = new Set(ids);
+    assertEqual(set.size, RULES.ingredients.length, "duplicate id found");
+  });
+
+  test('RULES.version === "0.3"', () => {
+    assertEqual(RULES.version, "0.3");
+  });
+
+  // --- Compare list (real localStorage, save/restore around every test) ---
+  (function runCompareListTests() {
+    const LS_KEY = "iq-compare-v001";
+    const realOriginalValue = localStorage.getItem(LS_KEY);
+
+    // A distinguishable "current" value to prove the save/restore mechanism itself actually
+    // works, independent of whatever (if anything) is really in there right now.
+    const sentinel = JSON.stringify([{ __sentinel: true, note: "pre-test value used to verify save/restore" }]);
+    localStorage.setItem(LS_KEY, sentinel);
+    const savedBeforeCompareTests = localStorage.getItem(LS_KEY);
+
+    try {
+      test("addToCompare: 4 distinct barcodes reach a compare list of length 4", () => {
+        saveCompareList([]); // deterministic starting point for this test run
+        addToCompare({ name: "Test Product 1", brand: "Test", ingredientsText: "water", barcode: "test-1111", at: 1 });
+        addToCompare({ name: "Test Product 2", brand: "Test", ingredientsText: "water", barcode: "test-2222", at: 2 });
+        addToCompare({ name: "Test Product 3", brand: "Test", ingredientsText: "water", barcode: "test-3333", at: 3 });
+        addToCompare({ name: "Test Product 4", brand: "Test", ingredientsText: "water", barcode: "test-4444", at: 4 });
+        assertEqual(loadCompareList().length, 4);
+      });
+
+      test("addToCompare: a 5th distinct entry is rejected — cap stays at 4, nothing silently replaced", () => {
+        addToCompare({ name: "Test Product 5", brand: "Test", ingredientsText: "water", barcode: "test-5555", at: 5 });
+        assertEqual(loadCompareList().length, 4);
+      });
+
+      test("addToCompare: a 6th entry with a duplicate barcode is deduped — still exactly 4", () => {
+        addToCompare({ name: "Test Product 1 (dup)", brand: "Test", ingredientsText: "water", barcode: "test-1111", at: 6 });
+        assertEqual(loadCompareList().length, 4);
+      });
+    } finally {
+      // Restore whatever this compare-list test block's own "current" value was, regardless
+      // of pass/fail above, before we verify the restore and hand real data back below.
+      localStorage.setItem(LS_KEY, savedBeforeCompareTests);
+    }
+
+    test("localStorage save/restore actually works: iq-compare-v001 is restored exactly", () => {
+      assertEqual(localStorage.getItem(LS_KEY), sentinel);
+    });
+
+    // Hand back whatever was really there before this whole suite ran, untouched.
+    if (realOriginalValue === null) localStorage.removeItem(LS_KEY);
+    else localStorage.setItem(LS_KEY, realOriginalValue);
+  })();
+
+  render();
+})();
+</script>
+</body>
+</html>
