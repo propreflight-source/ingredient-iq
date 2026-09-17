@@ -85,6 +85,7 @@
   <button data-tab="profile" role="tab" id="tab-btn-profile" aria-selected="false">Your hair</button>
   <button data-tab="recs" role="tab" id="tab-btn-recs" aria-selected="false">Recommendations</button>
   <button data-tab="compare" role="tab" id="tab-btn-compare" aria-selected="false">Compare</button>
+  <button data-tab="history" role="tab" id="tab-btn-history" aria-selected="false">History</button>
 </nav>
 
 <main>
@@ -159,6 +160,18 @@
   </div>
   <p class="muted" id="compare-empty">Nothing to compare yet — scan a product and tap "+ Compare" to add it here.</p>
   <div id="compare-list"></div>
+</section>
+
+<section id="tab-history" role="tabpanel" aria-labelledby="tab-btn-history">
+  <div class="note-box">
+    Everything you've looked up recently, newest first — scores here are always freshly
+    computed against your current hair profile, not stored from when you scanned it.
+  </div>
+  <div class="row" style="margin-bottom:0.8rem;">
+    <button class="ghost" id="btn-clear-history" type="button">Clear history</button>
+  </div>
+  <p class="muted" id="history-empty">Nothing scanned yet — your recent lookups will show up here.</p>
+  <div id="history-list"></div>
 </section>
 
 
@@ -288,6 +301,7 @@ function renderResult(product, ingredientsText, barcode) {
     html += '</div>';
   }
   if (ingredientsText) {
+    logToHistory({ name, brand, ingredientsText, barcode: barcode || null, at: Date.now() });
     html += '<details style="margin-top:1rem;"><summary style="cursor:pointer;font-weight:600;font-size:0.85rem;">Full ingredient list</summary><p class="muted" style="font-size:0.82rem;">' + esc(ingredientsText) + '</p></details>';
     html += '<div class="row" style="margin-top:0.8rem;">' +
       '<button class="ghost" id="btn-add-compare" type="button">+ Compare</button>' +
@@ -616,6 +630,59 @@ function renderCompareList() {
   });
 }
 
+// --- Scan history ---
+// Automatic and passive, unlike Compare (opt-in via the "+ Compare" button) -- every
+// successful lookup gets logged here silently, no button, no confirmation. Stores the
+// RAW ingredientsText, same principle as Compare and Recommendations: history always
+// re-scores fresh against the CURRENT profile when displayed, never a frozen score from
+// when it was logged.
+const LS_HISTORY = "iq-history-v001";
+const HISTORY_MAX = 20;
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(LS_HISTORY) || "[]"); } catch (_) { return []; }
+}
+function saveHistory(list) {
+  try { localStorage.setItem(LS_HISTORY, JSON.stringify(list.slice(0, HISTORY_MAX))); } catch (_) {}
+}
+function logToHistory(entry) {
+  let list = loadHistory();
+  if (entry.barcode) list = list.filter((e) => e.barcode !== entry.barcode); // re-scanning bumps to top instead of duplicating
+  list.unshift(entry);
+  saveHistory(list); // slice(0, HISTORY_MAX) inside saveHistory silently drops the oldest beyond the cap -- correct here since this is passive, unlike Compare's cap (which rejects with a message since that's an explicit user action)
+}
+function renderHistory() {
+  const emptyEl = document.getElementById("history-empty");
+  const listEl = document.getElementById("history-list");
+  if (!listEl) return;
+  const list = loadHistory(); // already newest-first from unshift -- chronological, not score-sorted like Compare
+  if (!list.length) {
+    if (emptyEl) emptyEl.style.display = "block";
+    listEl.innerHTML = "";
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = "none";
+  const profile = loadProfile();
+  listEl.innerHTML = list.map((entry) => {
+    const s = scoreIngredients(entry.ingredientsText, profile);
+    const c = scoreColor(s.score);
+    const when = new Date(entry.at).toLocaleDateString();
+    return '<div class="prod-card" style="margin-bottom:0.8rem;">' +
+      '<div class="name">' + esc(entry.name) + '</div>' +
+      (entry.brand ? '<div class="brand">' + esc(entry.brand) + '</div>' : '') +
+      '<span class="prod-score" style="color:' + c.fg + ';background:' + c.bg + ';">' + s.score + '/100</span>' +
+      '<div class="muted" style="margin-top:0.4rem;">' + esc(when) + '</div>' +
+      '<button class="ghost" type="button" data-at="' + entry.at + '" style="margin-top:0.7rem;">+ Compare</button>' +
+      '</div>';
+  }).join("");
+  listEl.querySelectorAll("button[data-at]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const at = Number(btn.dataset.at);
+      const entry = loadHistory().find((e) => e.at === at);
+      if (entry) addToCompare(entry); // reuse Compare's own add logic (dedup/cap) rather than reimplementing it
+    });
+  });
+}
+
 function renderHairGrid() {
   // NOTE: profile.hairType may still hold an old single-digit id ("1"-"4") saved before
   // the 12-subtype grid existed. None of the current HAIR_TYPES ids match a bare digit,
@@ -751,6 +818,7 @@ document.querySelectorAll("nav button").forEach((btn) => {
     btn.setAttribute("aria-selected", "true");
     document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
     if (btn.dataset.tab === "compare") renderCompareList();
+    if (btn.dataset.tab === "history") renderHistory();
   });
 });
 
@@ -762,6 +830,12 @@ document.getElementById("btn-lookup-barcode").addEventListener("click", () => {
 document.getElementById("btn-search-name").addEventListener("click", () => {
   const v = document.getElementById("manual-search").value.trim();
   if (v) searchByName(v);
+});
+document.getElementById("btn-clear-history").addEventListener("click", () => {
+  if (confirm("Clear all scan history?")) {
+    saveHistory([]);
+    renderHistory();
+  }
 });
 
 (async function init() {
@@ -776,6 +850,7 @@ document.getElementById("btn-search-name").addEventListener("click", () => {
   renderRecTabs();
   renderRecList();
   renderCompareList();
+  renderHistory();
 
   // Shareable scan results: ?barcode=<code> pre-fills and looks up on load,
   // so a result can be linked or bookmarked, not just reached by re-scanning.
